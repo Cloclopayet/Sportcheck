@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0d0f14"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org; connect-src 'self' https://nominatim.openstreetmap.org https://accounts.google.com https://*.googleapis.com https://www.googleapis.com https://gmail.googleapis.com; frame-src https://www.openstreetmap.org https://accounts.google.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
+<title>SportCheck</title>
+<meta name="application-name" content="SportCheck"/>
+<meta name="apple-mobile-web-app-title" content="SportCheck"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="apple-touch-icon" href="./icons/icon-152.png"/>
+<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png"/>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg=>{
+        // Vérifie les mises à jour au démarrage
+        try{reg.update();}catch(e){}
+        reg.addEventListener('updatefound',()=>{
+          const nw = reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange',()=>{
+            if(nw.state==='installed' && navigator.serviceWorker.controller){
+              // Nouvelle version dispo — notification discrète
+              try{
+                const t=document.getElementById('toast');
+                if(t){t.textContent='🔄 Nouvelle version dispo — rechargez pour l\'activer';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),5000);}
+              }catch(e){}
+            }
+          });
+        });
+      })
+      .catch(e=>console.warn('SW',e));
+  });
+}
+</script>
+<style>
+/* FONTS - embarquées via system stack pour éviter le texte bleu */
+:root{
+  --font:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  --font-mono:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;
+  --bg:#0d0f14; --bg2:#13161e; --bg3:#1a1e28; --bg4:#222633;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#e8ecf4; --muted:#8891a8; --faint:#4a5068;
+  --green:#22d07a; --gbg:rgba(34,208,122,0.1); --gbrd:rgba(34,208,122,0.25);
+  --red:#ff4d4d; --rbg:rgba(255,77,77,0.1); --rbrd:rgba(255,77,77,0.25);
+  --amber:#f5a623; --abg:rgba(245,166,35,0.1); --abrd:rgba(245,166,35,0.25);
+  --blue:#4da6ff; --bbg:rgba(77,166,255,0.1); --bbrd:rgba(77,166,255,0.25);
+  --r:12px; --rsm:8px; --rxs:6px;
+  /* safe area pour iPhone notch */
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden;}
+
+/* HEADER */
+.app-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;padding-left:calc(16px + var(--safe-l));padding-right:calc(16px + var(--safe-r));display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;}
+.app-logo{font-weight:800;font-size:17px;letter-spacing:-0.5px;line-height:1;}
+.app-logo span{color:var(--green);}
+.header-actions{display:flex;gap:6px;align-items:center;}
+
+/* BUTTONS - taille tactile min 44px */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:0 14px;border-radius:var(--rsm);border:none;cursor:pointer;font-family:var(--font);font-size:14px;font-weight:600;transition:all 0.15s;white-space:nowrap;-webkit-user-select:none;user-select:none;}
+.btn:active{transform:scale(0.96);}
+.btn-primary{background:var(--green);color:#061008;}
+.btn-primary:active{background:#1ab865;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);}
+.btn-ghost:active{background:var(--bg3);color:var(--text);}
+.btn-icon{padding:0;width:44px;}
+.btn-sm{min-height:36px;padding:0 12px;font-size:13px;}
+
+/* STEPPER */
+.stepper{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 8px;padding-left:calc(8px + var(--safe-l));display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.stepper::-webkit-scrollbar{display:none;}
+.step{display:flex;align-items:center;gap:6px;padding:12px 10px;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;color:var(--muted);font-size:13px;font-weight:500;min-height:48px;}
+.step.active{color:var(--green);border-bottom-color:var(--green);}
+.step.done{color:var(--green);}
+.snum{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border2);font-size:11px;font-weight:700;font-family:var(--font-mono);flex-shrink:0;}
+.step.active .snum{background:var(--green);color:#061008;border-color:var(--green);}
+.step.done .snum{background:var(--gbg);color:var(--green);border-color:var(--gbrd);}
+.s-check{display:none;}.step.done .s-check{display:inline;}.step.done .s-num-inner{display:none;}
+
+/* CONTENT */
+.content{max-width:760px;margin:0 auto;padding:20px 14px 100px;padding-left:calc(14px + var(--safe-l));padding-right:calc(14px + var(--safe-r));}
+.panel{display:none;animation:fadeIn 0.18s ease;}.panel.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.panel-title{font-weight:800;font-size:22px;margin-bottom:3px;letter-spacing:-0.3px;}
+.panel-sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.card-title{font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';width:3px;height:13px;background:var(--green);border-radius:2px;flex-shrink:0;}
+
+/* FORMS - inputs tactiles */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.fgrid.col3{grid-template-columns:1fr 1fr 1fr;}
+.fgrid.col1{grid-template-columns:1fr;}
+@media(max-width:560px){.fgrid,.fgrid.col3{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:12px;color:var(--muted);font-weight:600;}
+.field input,.field select,.field textarea{background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--rsm);color:var(--text);padding:11px 13px;font-family:var(--font);font-size:16px;/* 16px empêche zoom auto sur iOS */transition:border-color 0.15s;outline:none;width:100%;-webkit-appearance:none;appearance:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+.field textarea{resize:none;min-height:90px;font-size:15px;}
+.field select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238891a8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+.field select option{background:var(--bg3);}
+
+/* TYPE CARDS */
+.type-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+@media(max-width:420px){.type-cards{grid-template-columns:1fr;}}
+.type-card{border:2px solid var(--border);border-radius:var(--r);padding:14px 10px;cursor:pointer;transition:all 0.15s;text-align:center;background:var(--bg2);min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.type-card:active{transform:scale(0.97);}
+.type-card.sel-foot{border-color:var(--green);background:var(--gbg);}
+.type-card.sel-basket{border-color:var(--blue);background:var(--bbg);}
+.type-card.sel-hand{border-color:var(--red);background:var(--rbg);}
+.type-card.sel-sol{border-color:#ff9f43;background:rgba(255,159,67,0.12);}
+.type-icon{font-size:26px;line-height:1;}
+.type-name{font-weight:700;font-size:13px;}
+.type-norm{font-size:10px;color:var(--muted);font-family:var(--font-mono);}
+
+/* DIMS */
+.dims-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;}
+.dim-field{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 12px;}
+.dim-field label{font-size:10px;color:var(--muted);display:block;margin-bottom:4px;font-family:var(--font-mono);}
+.dim-field input{background:transparent;border:none;border-bottom:1px dashed var(--border2);border-radius:0;padding:4px 0;font-size:15px;font-family:var(--font-mono);color:var(--text);width:100%;outline:none;}
+.dim-field input:focus{border-bottom-color:var(--green);}
+
+/* CHECK TABLE - mobile friendly */
+.check-table{width:100%;border-collapse:collapse;}
+.check-table thead th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:8px 8px;text-align:left;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-weight:600;}
+.check-cat{background:var(--bg3);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:7px 10px;}
+.check-row{border-bottom:1px solid var(--border);}
+.check-row:active{background:var(--bg3);}
+.check-table td{padding:9px 8px;vertical-align:middle;}
+.check-label{font-size:13px;color:var(--text);line-height:1.4;}
+.check-obs{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rxs);padding:7px 9px;font-size:14px;color:var(--text);width:100%;outline:none;font-family:var(--font);}
+.check-obs:focus{border-color:var(--green);}
+.radio-btn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:2px;}
+.radio-btn input{display:none;}
+.radio-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-size:11px;color:transparent;}
+.radio-c input:checked~.radio-dot{background:var(--gbg);border-color:var(--green);color:var(--green);}
+.radio-nc input:checked~.radio-dot{background:var(--rbg);border-color:var(--red);color:var(--red);}
+.radio-na input:checked~.radio-dot{background:var(--bg3);border-color:var(--muted);color:var(--muted);}
+.radio-lbl{font-size:9px;color:var(--muted);font-family:var(--font-mono);}
+
+/* NC ROWS */
+.nc-item{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.nc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.nc-num{font-family:var(--font-mono);font-size:11px;color:var(--muted);font-weight:600;}
+.nc-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--rxs);}
+.nc-del:active{background:var(--rbg);}
+.nc-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:480px){.nc-fields{grid-template-columns:1fr;}}
+.nc-field-full{grid-column:1/-1;}
+.nc-photos{margin-top:12px;border-top:1px solid var(--border);padding-top:12px;}
+.nc-photos-label{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px;}
+.nc-photo-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.risk-badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;font-family:var(--font-mono);}
+.risk-Critique{background:var(--rbg);color:var(--red);}
+.risk-Modéré{background:var(--abg);color:var(--amber);}
+.risk-Mineur{background:var(--bbg);color:var(--blue);}
+
+/* PHOTOS */
+.photo-slot{aspect-ratio:4/3;border:2px dashed var(--border2);border-radius:var(--rsm);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;background:var(--bg4);}
+.photo-slot:active{border-color:var(--green);background:var(--gbg);}
+.photo-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:calc(var(--rsm) - 2px);}
+.photo-slot .ph-icon{font-size:22px;margin-bottom:4px;opacity:0.6;}
+.photo-slot .ph-label{font-size:10px;color:var(--muted);text-align:center;padding:0 4px;}
+.photo-slot input[type=file]{display:none;}
+.photo-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.75);border:none;color:white;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;z-index:2;}
+.photo-slot:hover .photo-del,.photo-slot:focus-within .photo-del{display:flex;}
+
+/* GENERAL PHOTOS GRID */
+.gen-photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+@media(max-width:420px){.gen-photo-grid{grid-template-columns:1fr 1fr;}}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;}
+.stat-val{font-weight:800;font-size:26px;}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
+.stat-box.c .stat-val{color:var(--green);}
+.stat-box.nc .stat-val{color:var(--red);}
+.stat-box.na .stat-val{color:var(--muted);}
+
+/* SUMMARY BANNER */
+.sum-banner{border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;}
+.sum-banner.conform{background:var(--gbg);border:1px solid var(--gbrd);}
+.sum-banner.reserve{background:var(--abg);border:1px solid var(--abrd);}
+.sum-banner.non-conform{background:var(--rbg);border:1px solid var(--rbrd);}
+.sum-icon{font-size:28px;flex-shrink:0;}
+.sum-text h3{font-weight:700;font-size:15px;}.sum-text p{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* CONCLUSION */
+.concl-options{display:flex;flex-direction:column;gap:9px;}
+.concl-opt{display:flex;align-items:center;gap:12px;padding:13px 14px;border:2px solid var(--border2);border-radius:var(--r);cursor:pointer;background:var(--bg3);min-height:56px;}
+.concl-opt:active{background:var(--bg2);}
+.concl-opt input{display:none;}
+.concl-opt .concl-text{color:var(--text)!important;}
+.concl-opt.sel-ok{border-color:var(--green);background:rgba(34,208,122,0.15);}
+.concl-opt.sel-ok .concl-text{color:#c8fde4!important;}
+.concl-opt.sel-att{border-color:var(--amber);background:rgba(245,166,35,0.15);}
+.concl-opt.sel-att .concl-text{color:#fde8c0!important;}
+.concl-opt.sel-nok{border-color:var(--red);background:rgba(255,77,77,0.15);}
+.concl-opt.sel-nok .concl-text{color:#ffd0d0!important;}
+.cdot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;transition:all 0.15s;}
+.concl-opt.sel-ok .cdot{background:var(--green);border-color:var(--green);}
+.concl-opt.sel-att .cdot{background:var(--amber);border-color:var(--amber);}
+.concl-opt.sel-nok .cdot{background:var(--red);border-color:var(--red);}
+.concl-text{font-size:13px;line-height:1.4;}
+
+/* SIGNATURE */
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:480px){.sig-grid{grid-template-columns:1fr;}}
+.sig-box{border:1px dashed var(--border2);border-radius:var(--r);padding:14px;}
+.sig-box>label{font-size:12px;color:var(--text);font-weight:600;display:block;margin-bottom:8px;}
+.sig-canvas{width:100%;height:90px;background:#1e2436;border-radius:var(--rsm);border:1px dashed rgba(34,208,122,0.4);cursor:crosshair;touch-action:none;display:block;}
+
+/* LOGO UPLOAD */
+.logo-area{border:2px dashed var(--border2);border-radius:var(--rsm);padding:16px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg3);}
+.logo-area:active{border-color:var(--green);}
+.logo-area img{max-height:60px;max-width:100%;object-fit:contain;border-radius:4px;}
+.logo-area .logo-ph{font-size:11px;color:var(--muted);}
+
+/* PROGRESS */
+.progress-bar{height:3px;background:var(--border);position:fixed;top:0;left:0;right:0;z-index:200;}
+.progress-fill{height:100%;background:var(--green);transition:width 0.3s ease;}
+
+/* NAV BOTTOM */
+.nav-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px;padding-bottom:calc(10px + var(--safe-bot));padding-left:calc(16px + var(--safe-l));padding-right:calc(16px + var(--safe-r));display:flex;justify-content:space-between;align-items:center;z-index:100;}
+.nav-info{font-size:12px;color:var(--muted);}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(80px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--border2);border-radius:24px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;transition:all 0.25s;z-index:400;max-width:88vw;text-align:center;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:flex-end;justify-content:center;padding:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+@media(min-width:600px){.modal-overlay{align-items:center;padding:16px;}}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:24px 20px;padding-bottom:calc(24px + var(--safe-bot));width:100%;max-width:540px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+@media(min-width:600px){.modal{border-radius:var(--r);padding-bottom:24px;}}
+.modal-drag{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
+.modal h2{font-weight:800;font-size:18px;margin-bottom:5px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;}
+.modal .field{margin-bottom:13px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+.msec{border-top:1px solid var(--border);padding-top:16px;margin-top:16px;}
+.msec h3{font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;}
+.info-box{background:var(--bbg);border:1px solid var(--bbrd);border-radius:var(--rsm);padding:11px 13px;font-size:12px;color:var(--blue);line-height:1.7;margin-bottom:11px;}
+.warn-box{background:var(--abg);border:1px solid var(--abrd);border-radius:var(--rsm);padding:11px 13px;font-size:12px;color:var(--amber);line-height:1.6;margin-bottom:11px;}
+.badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;font-family:var(--font-mono);}
+.badge-c{background:var(--gbg);color:var(--green);}
+.badge-nc{background:var(--rbg);color:var(--red);}
+.badge-na{background:var(--bg3);color:var(--muted);border:1px solid var(--border2);}
+
+/* SUCCESS MODAL */
+.success-screen{text-align:center;padding:10px 4px 8px;}
+.success-icon{font-size:52px;margin-bottom:10px;}
+.success-title{font-weight:800;font-size:21px;margin-bottom:6px;}
+.success-sub{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.6;}
+.action-status{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;text-align:left;}
+.act-item{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;}
+.act-item.pending{color:var(--muted);}
+.act-item.loading{color:var(--amber);}
+.act-item.success{color:var(--green);}
+.act-item.error{color:var(--red);}
+.success-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* GPS */
+.gps-row{display:flex;gap:8px;align-items:flex-end;}
+.gps-row .field{flex:1;}
+.btn-gps{min-height:44px;padding:0 13px;border-radius:var(--rsm);border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;font-size:18px;transition:all 0.15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.btn-gps:active{background:var(--gbg);border-color:var(--green);}
+.btn-gps.loading{animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.map-preview{width:100%;height:200px;border-radius:var(--rsm);border:1px solid var(--border2);margin-top:10px;overflow:hidden;position:relative;background:var(--bg3);}
+.map-preview iframe{width:100%;height:100%;border:none;}
+.map-preview .map-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;flex-direction:column;gap:6px;}
+.gps-info{font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--font-mono);}
+.gps-info.ok{color:var(--green);}
+.gps-info.err{color:var(--red);}
+
+/* TYPE BADGE dans header */
+.type-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:var(--font-mono);margin-left:8px;transition:all 0.2s;}
+.type-badge.foot{background:var(--gbg);color:var(--green);border:1px solid var(--gbrd);}
+.type-badge.basket{background:var(--bbg);color:var(--blue);border:1px solid var(--bbrd);}
+.type-badge.hand{background:var(--rbg);color:var(--red);border:1px solid var(--rbrd);}
+
+/* HOVER amélioration type-card */
+@media(hover:hover){.type-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.35);border-color:var(--muted);}}
+
+/* ÉDITION libellés */
+.check-label-wrap{display:flex;align-items:center;gap:6px;}
+.edit-label-btn{background:none;border:none;color:var(--faint);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px;opacity:0;transition:opacity 0.15s;flex-shrink:0;}
+.check-row:hover .edit-label-btn{opacity:1;}
+.check-label-edited{color:var(--amber);}
+.reset-labels-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:var(--rxs);padding:4px 10px;cursor:pointer;margin-top:8px;}
+.reset-labels-btn:hover{color:var(--text);border-color:var(--muted);}
+
+/* VALIDATION champs requis */
+.field.required label::after{content:" *";color:var(--red);font-size:10px;}
+.field.field-error input,.field.field-error select,.field.field-error textarea{border-color:var(--red);animation:shake 0.3s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+
+/* PRINT */
+@media print{
+  @page{margin:12mm;size:A4;}
+  /* Cache tout sauf le rapport */
+  body > *{display:none!important;}
+  #print-report-container{display:block!important;}
+}
+#print-report-container{display:none;}
+#print-report-container *{
+  color:#111!important;
+  background:white!important;
+  background-color:white!important;
+  border-color:#ddd!important;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+</style>
+</head>
+<body>
+
+<div id="print-report-container"></div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:16.6%"></div></div>
+
+<header class="app-header">
+  <div class="app-logo">SPORT<span>CHECK</span><span id="header-type-badge" style="display:none;"></span></div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-icon" onclick="openHistory()" title="Historique">📚</button>
+    <button class="btn btn-ghost btn-icon" onclick="openSettings()" title="Paramètres">⚙️</button>
+    <button class="btn btn-ghost btn-sm" onclick="saveLocal()">💾</button>
+    <button class="btn btn-primary btn-sm" onclick="downloadPdfNow()">⬇️ PDF</button>
+  </div>
+</header>
+
+<nav class="stepper" id="stepper">
+  <div class="step active" onclick="goTo(0)"><div class="snum"><span class="s-num-inner">1</span><span class="s-check">✓</span></div>Info</div>
+  <div class="step" onclick="goTo(1)"><div class="snum"><span class="s-num-inner">2</span><span class="s-check">✓</span></div>Matériel</div>
+  <div class="step" onclick="goTo(2)"><div class="snum"><span class="s-num-inner">3</span><span class="s-check">✓</span></div>Contrôle</div>
+  <div class="step" onclick="goTo(3)"><div class="snum"><span class="s-num-inner">4</span><span class="s-check">✓</span></div>NC + Photos</div>
+  <div class="step" onclick="goTo(4)"><div class="snum"><span class="s-num-inner">5</span><span class="s-check">✓</span></div>Photos gén.</div>
+  <div class="step" onclick="goTo(5)"><div class="snum"><span class="s-num-inner">6</span><span class="s-check">✓</span></div>Conclusion</div>
+</nav>
+
+<div class="content">
+
+<!-- PANEL 0 : IDENTIFICATION -->
+<div class="panel active" id="panel-0">
+  <div class="panel-title">Identification</div>
+  <div class="panel-sub">Site et mission</div>
+  <div class="card">
+    <div class="card-title">Site & Client</div>
+    <div class="fgrid">
+      <div class="field required"><label>Établissement / Client</label><input type="text" id="client" placeholder="Mairie de Saint-Denis…" autocomplete="organization"/></div>
+      <div class="fgrid col1" style="margin-top:0;">
+        <div class="gps-row">
+          <div class="field">
+            <label>Adresse du site</label>
+            <input type="text" id="adresse" placeholder="1 rue du Stade, 97400…" autocomplete="street-address"/>
+          </div>
+          <button class="btn-gps" id="btn-gps" onclick="detecterPosition()" title="Détecter ma position GPS">📍</button>
+        </div>
+        <div class="gps-info" id="gps-info">Appuyez sur 📍 pour détecter automatiquement l'adresse</div>
+        <div class="map-preview" id="map-preview">
+          <div class="map-ph">
+            <span style="font-size:28px;">🗺️</span>
+            <span>La carte apparaîtra après la détection GPS</span>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Interlocuteur sur site</label><input type="text" id="interlocuteur" placeholder="Nom et prénom" autocomplete="name"/></div>
+      <div class="field"><label>Téléphone / Email</label><input type="tel" id="contact" placeholder="+262 6XX XXX XXX" autocomplete="tel"/></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Mission</div>
+    <div class="fgrid col3">
+      <div class="field required"><label>Technicien</label><input type="text" id="technicien" placeholder="Votre nom" autocomplete="name"/></div>
+      <div class="field required"><label>Date de vérification</label><input type="date" id="date_verif"/></div>
+      <div class="field"><label>N° rapport</label><input type="text" id="num_rapport" placeholder="RPT-2026-001"/></div>
+      <div class="field"><label>Heure début</label><input type="time" id="heure_debut"/></div>
+      <div class="field"><label>Heure fin</label><input type="time" id="heure_fin"/></div>
+      <div class="field"><label>Météo / Conditions</label><input type="text" id="meteo" placeholder="Ensoleillé, 28°C"/></div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 1 : ÉQUIPEMENT -->
+<div class="panel" id="panel-1">
+  <div class="panel-title">Type d'équipement</div>
+  <div class="panel-sub">Sélectionnez le matériel à vérifier</div>
+  <div class="type-cards">
+    <div class="type-card" id="tc-foot" onclick="selectType('foot')"><div class="type-icon">⚽</div><div class="type-name" style="color:#22d07a">But Football</div><div class="type-norm">NF EN 748</div></div>
+    <div class="type-card" id="tc-basket" onclick="selectType('basket')"><div class="type-icon">🏀</div><div class="type-name" style="color:#4da6ff">Panneau Basket</div><div class="type-norm">NF EN 1270</div></div>
+    <div class="type-card" id="tc-hand" onclick="selectType('hand')"><div class="type-icon">🤾</div><div class="type-name" style="color:#ff6b6b">But Handball</div><div class="type-norm">NF EN 749</div></div>
+    <div class="type-card" id="tc-sol" onclick="selectType('sol')"><div class="type-icon">🛝</div><div class="type-name" style="color:#ff9f43">Sol Amortissant</div><div class="type-norm">NF EN 1177</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Identification matériel</div>
+    <div class="fgrid col3">
+      <div class="field"><label>Marque / Fabricant</label><input type="text" id="marque" placeholder="Trigano…"/></div>
+      <div class="field"><label>Modèle / Référence</label><input type="text" id="modele" placeholder="Réf. xxxxx"/></div>
+      <div class="field"><label>N° de série / Repère</label><input type="text" id="nserie" placeholder="SN-xxxxx"/></div>
+      <div class="field"><label>Année de pose</label><input type="text" id="annee_pose" placeholder="2019" inputmode="numeric"/></div>
+      <div class="field"><label>Dernière vérification</label><input type="date" id="date_derniere_verif"/></div>
+      <div class="field"><label>Localisation</label><input type="text" id="localisation" placeholder="Gymnase A — Terrain 2"/></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="dims-title">Dimensions réglementaires — valeurs mesurées</div>
+    <div class="dims-grid" id="dims-container"><div style="color:var(--muted);font-size:13px;">Sélectionnez d'abord un type d'équipement</div></div>
+  </div>
+</div>
+
+<!-- PANEL 2 : CONTRÔLE -->
+<div class="panel" id="panel-2">
+  <div class="panel-title">Grille de contrôle</div>
+  <div class="panel-sub">Cochez chaque point — les NC apparaissent à l'étape suivante</div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="check-table">
+      <thead><tr>
+        <th style="width:42%">Point de contrôle</th>
+        <th style="width:10%;text-align:center">C</th>
+        <th style="width:10%;text-align:center">NC</th>
+        <th style="width:10%;text-align:center">N/A</th>
+        <th>Observation</th>
+      </tr></thead>
+      <tbody id="check-body"></tbody>
+    </table>
+  </div>
+  <div style="display:flex;gap:10px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;">
+    <span><span class="badge badge-c">C</span> Conforme</span>
+    <span><span class="badge badge-nc">NC</span> Non conforme</span>
+    <span><span class="badge badge-na">N/A</span> Sans objet</span>
+  </div>
+</div>
+
+<!-- PANEL 3 : NC + PHOTOS NC -->
+<div class="panel" id="panel-3">
+  <div class="panel-title">Non-conformités</div>
+  <div class="panel-sub">2 photos par NC — appuyez sur un emplacement pour photographier</div>
+  <div class="warn-box" id="nc-warn" style="display:none">⚡ Les NC sont pré-remplies depuis la grille de contrôle</div>
+  <div id="nc-container"></div>
+  <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="addNcRow()">+ Ajouter une NC manuellement</button>
+</div>
+
+<!-- PANEL 4 : PHOTOS GÉNÉRALES -->
+<div class="panel" id="panel-4">
+  <div class="panel-title">Photos générales</div>
+  <div class="panel-sub">Vue d'ensemble, contexte, détails complémentaires</div>
+  <div class="gen-photo-grid" id="gen-photo-grid"></div>
+</div>
+
+<!-- PANEL 5 : CONCLUSION -->
+<div class="panel" id="panel-5">
+  <div class="panel-title">Conclusion & Signatures</div>
+  <div class="panel-sub">Synthèse finale et validation</div>
+  <div class="stats-grid">
+    <div class="stat-box c"><div class="stat-val" id="stat-c">0</div><div class="stat-lbl">Conformes</div></div>
+    <div class="stat-box nc"><div class="stat-val" id="stat-nc">0</div><div class="stat-lbl">Non conformes</div></div>
+    <div class="stat-box na"><div class="stat-val" id="stat-na">0</div><div class="stat-lbl">Sans objet</div></div>
+  </div>
+  <div id="sum-banner" class="sum-banner conform" style="display:none;">
+    <div class="sum-icon" id="sum-icon">✅</div>
+    <div class="sum-text"><h3 id="sum-title">Conforme</h3><p id="sum-sub"></p></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Conclusion générale</div>
+    <div class="concl-options">
+      <label class="concl-opt" id="concl-ok" onclick="setConcl('ok')"><input type="radio" name="concl"/><div class="cdot"></div><div class="concl-text"><strong>Équipement conforme</strong> — utilisation autorisée</div></label>
+      <label class="concl-opt" id="concl-att" onclick="setConcl('att')"><input type="radio" name="concl"/><div class="cdot"></div><div class="concl-text"><strong>Conforme sous réserve</strong> — actions correctives sous <input type="number" id="delai-att" style="width:40px;background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-size:14px;text-align:center;-webkit-appearance:none;" value="30" inputmode="numeric" onclick="event.stopPropagation()"/> jours</div></label>
+      <label class="concl-opt" id="concl-nok" onclick="setConcl('nok')"><input type="radio" name="concl"/><div class="cdot"></div><div class="concl-text"><strong>Non conforme</strong> — mise hors service immédiate recommandée</div></label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Observations générales</div>
+    <div class="field"><textarea id="obs_generale" placeholder="Remarques complémentaires, contexte, recommandations…"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Signatures</div>
+    <div class="sig-grid">
+      <div class="sig-box">
+        <label>Technicien vérificateur</label>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="sig-tech-nom" placeholder="Nom, prénom" autocomplete="name"/></div>
+        <canvas class="sig-canvas" id="sig-tech" width="400" height="90"></canvas>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;" onclick="clearSig('sig-tech')">Effacer signature</button>
+      </div>
+      <div class="sig-box">
+        <label>Représentant client</label>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="sig-client-nom" placeholder="Nom, prénom" autocomplete="name"/></div>
+        <canvas class="sig-canvas" id="sig-client" width="400" height="90"></canvas>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;" onclick="clearSig('sig-client')">Effacer signature</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end content -->
+
+<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99;background:#1a1e28;border-top:1px solid rgba(34,208,122,0.3);padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;">
+  <div><span style="color:#22d07a;font-weight:700;">📲 Installer SportCheck</span><br/><span style="color:#8891a8;font-size:11px;">Accès rapide depuis votre écran d'accueil</span></div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="document.getElementById('pwa-banner').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8891a8;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;">Plus tard</button>
+    <button id="pwa-install-btn" style="background:#22d07a;border:none;color:#061008;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;">Installer</button>
+  </div>
+</div>
+<div class="nav-bottom">
+  <button class="btn btn-ghost" id="btn-prev" onclick="prev()" style="display:none">← Retour</button>
+  <div class="nav-info" id="nav-info">Étape 1 / 6</div>
+  <button class="btn btn-primary" id="btn-next" onclick="next()">Suivant →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL PARAMÈTRES -->
+<div class="modal-overlay hidden" id="modal-settings">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <h2>⚙️ Paramètres</h2>
+    <div class="modal-sub">Configurez une fois — sauvegardé sur cet appareil.</div>
+
+    <div class="msec">
+      <h3>🏢 Entreprise vérificatrice</h3>
+      <div class="field"><label>Nom de l'entreprise</label><input type="text" id="cfg-entreprise" placeholder="SAS PHB"/></div>
+      <div class="field"><label>Adresse de la société</label><input type="text" id="cfg-adresse-soc" placeholder="12 rue des Artisans, 97490 Saint-Clotilde"/></div>
+      <div class="field"><label>Téléphone / Email société</label><input type="text" id="cfg-contact-soc" placeholder="+262 262 XX XX XX — contact@phb.re"/></div>
+      <div class="field"><label>N° d'agrément / Certification</label><input type="text" id="cfg-agrement" placeholder="Ex: Cert. QUALIF SPORT 2024-XXXX"/></div>
+      <div class="field"><label>Technicien par défaut</label><input type="text" id="cfg-tech-defaut" placeholder="Claude Payet"/></div>
+      <div class="field"><label>Logo (image JPG/PNG)</label>
+        <div class="logo-area" id="logo-area" onclick="document.getElementById('logo-input').click()">
+          <img id="logo-preview" src="" style="display:none;max-height:60px;max-width:180px;"/>
+          <div class="logo-ph" id="logo-ph">📁 Appuyer pour choisir un logo</div>
+        </div>
+        <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="loadLogo(this)"/>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="clearLogo()">Supprimer le logo</button>
+      </div>
+    </div>
+
+    <div class="msec">
+      <h3>📧 Gmail — Envoi direct</h3>
+      <div class="info-box">
+        <strong>Envoi depuis votre compte Gmail directement.</strong><br/>
+        1. Allez sur <strong>console.cloud.google.com</strong><br/>
+        2. Créez un projet → activez <strong>Gmail API</strong><br/>
+        3. Identifiants → OAuth 2.0 → Type : <strong>Application Web</strong><br/>
+        4. Ajoutez l'URL de cette app dans "Origines JavaScript autorisées"<br/>
+        5. Collez le Client ID ci-dessous — c'est tout !<br/>
+        <strong>⚠️ Même Client ID que Google Drive si déjà configuré.</strong>
+      </div>
+      <div class="field"><label>Gmail Client ID OAuth</label><input type="text" id="cfg-gmail-clientid" placeholder="xxxxxxxxxx.apps.googleusercontent.com" autocomplete="off" autocorrect="off" autocapitalize="none"/></div>
+      <div class="field"><label>Email destinataire</label><input type="email" id="cfg-email-dest" value="adv.gsemu@gmail.com" autocomplete="email"/></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Le rapport sera envoyé depuis <strong>adv.gsemu@gmail.com</strong> vers cette adresse.</div>
+    </div>
+
+    <div class="msec">
+      <h3>☁️ Google Drive (optionnel)</h3>
+      <div class="info-box">
+        Upload automatique dans votre Drive.<br/>
+        1. <strong>console.cloud.google.com</strong> → Nouveau projet → Activer Drive API<br/>
+        2. Identifiants → OAuth 2.0 → Application Web<br/>
+        3. Ajouter l'URL de ce fichier dans "Origines autorisées"
+      </div>
+      <div class="field"><label>Client ID OAuth</label><input type="text" id="cfg-gdrive-clientid" placeholder="xxxxxxxxxx.apps.googleusercontent.com" autocomplete="off" autocapitalize="none"/></div>
+      <div class="field"><label>ID du dossier Drive</label><input type="text" id="cfg-gdrive-folder" placeholder="Collez l'ID du dossier ici" autocomplete="off" autocapitalize="none"/></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:-6px;line-height:1.6;">
+        Sur Drive : clic droit sur le dossier → <strong>Obtenir le lien</strong><br/>
+        L'ID est la partie après <code style="background:var(--bg3);padding:1px 4px;border-radius:3px;">folders/</code> dans l'URL
+      </div>
+    </div>
+
+    <div id="local-mode-info" class="info-box" style="margin-top:14px;display:none;">
+      <strong>⚡ Mode fichier local détecté</strong><br/>
+      Gmail API et Google Drive nécessitent HTTPS.<br/>
+      En mode local : Gmail → ouvre votre client mail (Outlook, Mail, etc.)<br/>
+      Drive → sauvegarde un fichier HTML sur votre PC.<br/>
+      Pour toutes les fonctions : hébergez sur GitHub Pages.
+    </div>
+    <div class="msec">
+      <h3>✏️ Libellés de contrôle</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Double-cliquez sur un libellé dans la grille de contrôle pour le modifier. Les personnalisations sont sauvegardées sur cet appareil.</div>
+      <button class="reset-labels-btn" onclick="resetCustomLabels()">🔄 Réinitialiser tous les libellés aux valeurs par défaut</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeSettings()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIQUE -->
+<div class="modal-overlay hidden" id="modal-history">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <h2>📚 Historique des rapports</h2>
+    <div class="modal-sub">Rapports finalisés — stockés localement sur cet appareil.</div>
+    <div id="history-list" style="max-height:55vh;overflow-y:auto;margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeHistory()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUCCÈS -->
+<div class="modal-overlay hidden" id="modal-success">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-drag"></div>
+    <div class="success-screen">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Rapport finalisé !</div>
+      <div class="success-sub">Choisissez une action</div>
+      <div style="margin:0 0 18px;text-align:left;">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">Envoyer à (email)</label>
+        <input type="email" id="modal-email-dest" placeholder="destinataire@email.com" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--rsm);color:var(--text);padding:10px 13px;font-size:15px;width:100%;outline:none;" onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border2)'"/>
+      </div>
+      <div id="email-status" style="display:none;margin-bottom:14px;padding:10px 13px;border-radius:var(--rsm);font-size:13px;"></div>
+      <div class="success-actions" style="flex-direction:column;gap:10px;">
+        <button class="btn btn-primary" style="width:100%;min-height:48px;font-size:15px;" onclick="sendEmailNow()">📧 Envoyer par email</button>
+        <button class="btn btn-ghost" style="width:100%;min-height:48px;font-size:15px;" onclick="downloadPdfNow()">⬇️ Télécharger PDF sur mon PC</button>
+        <button class="btn btn-ghost" style="width:100%;min-height:48px;font-size:15px;" onclick="printNow()">🖨️ Imprimer</button>
+        <button class="btn btn-ghost" style="width:100%;min-height:44px;font-size:13px;color:var(--green);" onclick="resetApp()">✚ Nouveau rapport</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== UTILS : anti-XSS + debounce =====
+function esc(s){
+  if(s==null)return'';
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escAttr(s){return esc(s);}
+function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms);};}
+
+// ===== HISTORIQUE (IndexedDB) =====
+const DB_NAME='sportcheck_db', DB_STORE='rapports', DB_VERSION=1;
+function openDb(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VERSION);
+    r.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(DB_STORE)){
+        const s=db.createObjectStore(DB_STORE,{keyPath:'id'});
+        s.createIndex('date','date',{unique:false});
+      }
+    };
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function saveRapportHistory(rapport){
+  try{
+    const db=await openDb();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction(DB_STORE,'readwrite');
+      tx.objectStore(DB_STORE).put(rapport);
+      tx.oncomplete=()=>res(true);
+      tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){console.warn('IDB save',e);return false;}
+}
+async function listRapports(){
+  try{
+    const db=await openDb();
+    return new Promise((res)=>{
+      const tx=db.transaction(DB_STORE,'readonly');
+      const req=tx.objectStore(DB_STORE).getAll();
+      req.onsuccess=()=>res((req.result||[]).sort((a,b)=>(b.date||'').localeCompare(a.date||'')));
+      req.onerror=()=>res([]);
+    });
+  }catch(e){return[];}
+}
+async function deleteRapport(id){
+  try{
+    const db=await openDb();
+    return new Promise((res)=>{
+      const tx=db.transaction(DB_STORE,'readwrite');
+      tx.objectStore(DB_STORE).delete(id);
+      tx.oncomplete=()=>res(true);
+    });
+  }catch(e){return false;}
+}
+
+// ===== DATA =====
+const CHECKS={
+  foot:[{cat:'Ancrage et stabilité'},{id:'f1',label:'Ancrage au sol — fixation (manchons, platines, scellement)'},{id:'f2',label:'Stabilité latérale et longitudinale (test oscillation)'},{id:'f3',label:'Dispositif anti-basculement (contrepoids / blocage)'},{id:'f4',label:'Verticalité des montants (tolérance ±5 mm/m)'},{cat:'Structure'},{id:'f5',label:'Absence de déformation / cintrage des montants'},{id:'f6',label:'Intégrité de la transversale (sans enfoncement ni fissure)'},{id:'f7',label:'Assemblages montant / transversale (boulons, goupilles)'},{id:'f8',label:'Flèche transversale dans la tolérance (max 10 mm)'},{cat:'État de surface'},{id:'f9',label:'Corrosion / points de rouille'},{id:'f10',label:'Revêtement / galvanisation / peinture époxy'},{id:'f11',label:'Embouts et capuchons sur extrémités de tubes'},{id:'f12',label:"Absence d'arêtes vives / bavures accessibles"},{cat:'Filet'},{id:'f13',label:'Présence et fixation complète du filet'},{id:'f14',label:'Absence de déchirures / mailles cassées'},{id:'f15',label:'Crochets / attaches sans saillie dangereuse'},{cat:'Sécurité'},{id:'f16',label:'Zone de dégagement arrière (min. 1,50 m)'},{id:'f17',label:"Étiquette fabricant présente"}],
+  basket:[{cat:'Ancrage et structure support'},{id:'b1',label:'Fixation au sol / platine de scellement'},{id:'b2',label:'Verticalité du poteau principal'},{id:'b3',label:'Stabilité — absence de jeu à la base'},{id:'b4',label:'Boulonnerie / soudures de la potence'},{cat:'Panneau et cadre'},{id:'b5',label:'Panneau sans fissure / éclat (verre trempé ou composite)'},{id:'b6',label:'Cadre de protection périmétrique du panneau'},{id:'b7',label:'Fixation panneau sur potence (colliers, boulons)'},{id:'b8',label:'Marquage réglementaire visible (carré de tir 59×45 cm)'},{cat:'Anneau et filet'},{id:'b9',label:'Anneau Ø 45 cm — absence de déformation'},{id:'b10',label:'Fixation anneau sur panneau (boulons + rondelles)'},{id:'b11',label:'Filet présent, complet, sans déchirure'},{id:'b12',label:'Anneau escamotable — mécanisme fonctionnel (si applicable)'},{cat:'Surface et sécurité'},{id:'b13',label:'Corrosion structure métallique'},{id:'b14',label:'Protection mousse / rembourrage sur poteau accessible'},{id:'b15',label:"Absence d'arêtes vives accessibles"},{id:'b16',label:"Étiquette fabricant présente"}],
+  hand:[{cat:'Ancrage et stabilité'},{id:'h1',label:'Ancrage au sol (manchons encastrés ou platines)'},{id:'h2',label:'Stabilité — absence de bascule latérale'},{id:'h3',label:'Dispositif anti-basculement (si but mobile)'},{id:'h4',label:'Verticalité des montants'},{cat:'Structure'},{id:'h5',label:'Absence de déformation / ovalisations sur les tubes'},{id:'h6',label:'Assemblages montant / transversale (boulons, goupilles)'},{id:'h7',label:'Flèche transversale dans la tolérance (max 10 mm)'},{id:'h8',label:'Intégrité des pieds arrière (jambes de force)'},{cat:'État de surface'},{id:'h9',label:'Corrosion / points de rouille'},{id:'h10',label:'Revêtement / peinture / galvanisation'},{id:'h11',label:'Embouts et capuchons sur extrémités'},{id:'h12',label:"Absence d'arêtes vives accessibles"},{cat:'Filet'},{id:'h13',label:'Présence et fixation complète du filet'},{id:'h14',label:'Absence de déchirures / mailles cassées'},{id:'h15',label:'Attaches sans saillie dangereuse'},{cat:'Sécurité'},{id:'h16',label:'Zone de dégagement arrière respectée'},{id:'h17',label:"Étiquette fabricant présente"}],
+  sol:[
+    {cat:'Type et état général du revêtement'},
+    {id:'s1',label:'Type de revêtement identifié et conforme à la fiche technique'},
+    {id:'s2',label:'Épaisseur uniforme sur toute la zone de réception'},
+    {id:'s3',label:'Absence de tassement, affaissements ou zones dures localisées'},
+    {id:'s4',label:"Continuité du revêtement (sans joints béants ni décollements)"},
+    {id:'s5',label:'Surface exempte de corps étrangers (verre, cailloux, déchets)'},
+    {id:'s6',label:'Absence de déformation permanente / orniérage'},
+    {cat:'Drainage et propreté'},
+    {id:'s7',label:"Drainage fonctionnel — absence de stagnation d'eau"},
+    {id:'s8',label:'Absence de contamination (déjections animales, huiles, produits chimiques)'},
+    {id:'s9',label:'Propreté générale satisfaisante — nettoyage à jour'},
+    {id:'s10',label:'Absence de mousse / végétation sur la surface'},
+    {cat:'Zone de réception et périmètre'},
+    {id:'s11',label:'Zone de réception couvre bien la hauteur de chute libre (HLC) de chaque équipement'},
+    {id:'s12',label:'Périmètre de sécurité respecté sur tous les côtés (min. 1,50 m)'},
+    {id:'s13',label:'Bordures / délimitation de zone intactes et non saillantes'},
+    {id:'s14',label:'Hauteur libre sous équipement ≥ HLC indiquée par le fabricant'},
+    {id:'s15',label:'Aucun obstacle dans la zone de chute (poteaux, murs, autres équipements)'},
+    {cat:'Conformité NF EN 1177 — Essais instrumentés'},
+    {id:'s16',label:'Test HIC réalisé — résultat < 1 000 (seuil réglementaire)'},
+    {id:'s17',label:'Valeur gmax < 200 g (si test instrumenté réalisé)'},
+    {id:'s18',label:'Rapport de test EN 1177 disponible et à jour (≤ 1 an recommandé)'},
+    {id:'s19',label:'Marquage / étiquetage du revêtement visible et lisible'},
+    {id:'s20',label:'Fiche technique fabricant disponible sur site'}
+  ]
+};
+const DIMS={
+  foot:[{label:'Largeur int. (7,32 m)',id:'df1'},{label:'Hauteur int. (2,44 m)',id:'df2'},{label:'Prof. sol (≥0,80 m)',id:'df3'},{label:'Prof. haut (≥1,00 m)',id:'df4'},{label:'Ø montant (mm)',id:'df5'}],
+  basket:[{label:'Haut. panier/sol (3,05m)',id:'db1'},{label:'Saillie panneau (≥1,20m)',id:'db2'},{label:'Haut. bord inf. (2,75m)',id:'db3'},{label:'Larg. panneau (1,80m)',id:'db4'}],
+  hand:[{label:'Largeur int. (3,00 m)',id:'dh1'},{label:'Hauteur int. (2,00 m)',id:'dh2'},{label:'Profondeur (≥1,00 m)',id:'dh3'},{label:'Ø montant (mm)',id:'dh4'}],
+  sol:[{label:'Épaisseur mesurée (cm)',id:'ds1'},{label:'Épaisseur mini requise (cm)',id:'ds2'},{label:'HLC équipement le + haut (m)',id:'ds3'},{label:'Surface zone réception (m²)',id:'ds4'},{label:'Périmètre de sécurité (m)',id:'ds5'},{label:'Valeur HIC mesurée',id:'ds6'},{label:'Valeur gmax (g)',id:'ds7'}]
+};
+const GEN_LABELS=['Vue générale','Ancrage / sol','Assemblage détail','Vue globale terrain'];
+
+// ===== LIBELLÉS PERSONNALISÉS =====
+function getCustomLabels(){try{return JSON.parse(localStorage.getItem('sc_custom_labels')||'{}');}catch(e){return{};}}
+function saveCustomLabels(labels){localStorage.setItem('sc_custom_labels',JSON.stringify(labels));}
+function editCheckLabel(id){
+  // Trouve le libellé original
+  let origLabel='';
+  if(selType){const item=CHECKS[selType].find(i=>i.id===id);if(item)origLabel=item.label;}
+  const customs=getCustomLabels();
+  const current=customs[id]||origLabel;
+  const nouveau=prompt('Modifier le libellé du point de contrôle :\n(Laissez vide pour rétablir la valeur par défaut)',current);
+  if(nouveau===null)return; // annulé
+  if(nouveau.trim()===''){delete customs[id];}
+  else{customs[id]=nouveau.trim();}
+  saveCustomLabels(customs);
+  buildCheckTable(); // re-render
+  toast('✏️ Libellé mis à jour');
+}
+function resetCustomLabels(){
+  if(!confirm('Réinitialiser tous les libellés personnalisés ?'))return;
+  localStorage.removeItem('sc_custom_labels');
+  if(cur===2)buildCheckTable();
+  toast('🔄 Libellés réinitialisés');
+}
+
+// ===== COMPRESSION IMAGE =====
+function compressImage(file,maxW,maxH,quality){
+  return new Promise(res=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width,h=img.height;
+      if(w>maxW||h>maxH){const r=Math.min(maxW/w,maxH/h);w=Math.round(w*r);h=Math.round(h*r);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file);};
+    img.src=url;
+  });
+}
+
+// ===== VALIDATION DOUCE =====
+function validateStep(step){
+  if(step===0){
+    let ok=true;
+    [['client','Établissement / Client'],['technicien','Technicien'],['date_verif','Date de vérification']].forEach(([id,label])=>{
+      const el=document.getElementById(id);
+      const field=el?.closest('.field');
+      if(!el?.value){
+        field?.classList.add('field-error');
+        setTimeout(()=>field?.classList.remove('field-error'),1500);
+        ok=false;
+      }
+    });
+    if(!ok){toast('⚠️ Remplissez les champs obligatoires *');return false;}
+  }
+  if(step===1&&!selType){
+    toast('⚠️ Sélectionnez un type d\'équipement');return false;
+  }
+  return true;
+}
+
+// ===== STATE =====
+let cur=0,selType=null,checkData={},ncRows=[],conclVal=null,genPhotos={},lastHtml='',lastFn='',lastDriveLink='',gTok=null,logoData='',gpsLat=null,gpsLng=null,gpsAdresse='',gpsMapBase64='';
+
+// ===== NUMÉROTATION AUTO =====
+function initialesTech(nom){
+  if(!nom) return 'XX';
+  return String(nom).trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase();
+}
+function genererNumRapport(){
+  const d=new Date();
+  const ymd=d.getFullYear().toString().slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const tech = initialesTech(gv('technicien') || (getCfg().techDefaut||''));
+  // Séquence quotidienne, stockée par jour
+  const key='sc_seq_'+ymd+'_'+tech;
+  let seq=parseInt(localStorage.getItem(key)||'0',10)+1;
+  localStorage.setItem(key,String(seq));
+  return `RPT-${ymd}-${tech}-${String(seq).padStart(3,'0')}`;
+}
+
+// ===== AUTO-SAVE =====
+const scheduleAutoSave = debounce(()=>{ try{saveLocal(true);}catch(e){} }, 800);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('date_verif').valueAsDate=new Date();
+  buildGenPhotos();initSig('sig-tech');initSig('sig-client');
+  loadCfgToState();loadLocal();updateNav();
+  // Numéro auto si vide (après loadLocal pour ne pas écraser une reprise)
+  const numInp=document.getElementById('num_rapport');
+  if(numInp && !numInp.value) numInp.value = genererNumRapport();
+  // Binding auto-save sur tous les inputs/textarea/select du formulaire
+  document.querySelectorAll('.content input, .content textarea, .content select').forEach(el=>{
+    el.addEventListener('input', scheduleAutoSave);
+    el.addEventListener('change', scheduleAutoSave);
+  });
+});
+
+// ===== GPS =====
+function detecterPosition(){
+  const btn = document.getElementById('btn-gps');
+  const info = document.getElementById('gps-info');
+  if(!navigator.geolocation){
+    info.textContent = 'GPS non disponible sur cet appareil';
+    info.className = 'gps-info err';
+    return;
+  }
+  btn.classList.add('loading');
+  btn.textContent = '⏳';
+  info.textContent = 'Détection en cours…';
+  info.className = 'gps-info';
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      gpsLat = pos.coords.latitude;
+      gpsLng = pos.coords.longitude;
+      const acc = Math.round(pos.coords.accuracy);
+
+      // Affiche la carte OpenStreetMap zoomée
+      afficherCarte(gpsLat, gpsLng);
+
+      // Geocoding inverse via Nominatim (gratuit, sans clé API)
+      try{
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${gpsLat}&lon=${gpsLng}&format=json&addressdetails=1`,
+          {headers:{'Accept-Language':'fr'}}
+        );
+        const d = await r.json();
+        if(d && d.display_name){
+          // Construit une adresse propre
+          const a = d.address || {};
+          const rue = (a.house_number ? a.house_number+' ' : '') + (a.road || a.pedestrian || a.footway || '');
+          const ville = a.city || a.town || a.village || a.municipality || '';
+          const cp = a.postcode || '';
+          const adresseFormatee = [rue, cp+' '+ville].filter(x=>x.trim()).join(', ').trim();
+          
+          gpsAdresse = adresseFormatee || d.display_name;
+          document.getElementById('adresse').value = gpsAdresse;
+          info.textContent = '✅ Position détectée — précision : '+acc+'m | '+gpsLat.toFixed(6)+', '+gpsLng.toFixed(6);
+          info.className = 'gps-info ok';
+        }
+      }catch(e){
+        // Geocoding échoué mais on a les coords
+        info.textContent = '📍 GPS : '+gpsLat.toFixed(6)+', '+gpsLng.toFixed(6)+' (précision '+acc+'m)';
+        info.className = 'gps-info ok';
+      }
+      // Télécharge la carte statique et la convertit en base64
+      await telechargerCarteBase64(gpsLat, gpsLng);
+      btn.classList.remove('loading');
+      btn.textContent = '✅';
+    },
+    (err) => {
+      btn.classList.remove('loading');
+      btn.textContent = '📍';
+      const msgs = {1:'Accès GPS refusé — autorisez la localisation', 2:'Position indisponible', 3:'Délai GPS dépassé'};
+      info.textContent = msgs[err.code] || 'Erreur GPS';
+      info.className = 'gps-info err';
+    },
+    {enableHighAccuracy:true, timeout:15000, maximumAge:0}
+  );
+}
+
+function afficherCarte(lat, lng){
+  const map = document.getElementById('map-preview');
+  if(!map) return;
+  const la = Number(lat), lo = Number(lng);
+  if(!isFinite(la) || !isFinite(lo)) return;
+  // Construction DOM (pas d'innerHTML) + sandbox sur l'iframe
+  map.replaceChildren();
+  const ifr = document.createElement('iframe');
+  const bbox = `${lo-0.001},${la-0.001},${lo+0.001},${la+0.001}`;
+  ifr.src = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${la},${lo}`;
+  ifr.loading = 'lazy';
+  ifr.setAttribute('sandbox','allow-scripts allow-same-origin allow-popups');
+  ifr.referrerPolicy = 'no-referrer';
+  map.appendChild(ifr);
+}
+
+async function telechargerCarteBase64(lat, lng){
+  try{
+    // Méthode fiable : dessiner la carte sur un canvas avec les tuiles OSM
+    const canvas = document.createElement('canvas');
+    canvas.width = 600; canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+
+    // Fond gris
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0,0,600,300);
+
+    // Calcul des tuiles OSM
+    const zoom = 18;
+    const tileSize = 256;
+    const n = Math.pow(2, zoom);
+    const tileX = Math.floor((lng + 180) / 360 * n);
+    const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI/180) + 1/Math.cos(lat * Math.PI/180)) / Math.PI) / 2 * n);
+
+    // Pixel exact dans la tuile centrale
+    const pixX = ((lng + 180) / 360 * n - tileX) * tileSize;
+    const pixY = ((1 - Math.log(Math.tan(lat * Math.PI/180) + 1/Math.cos(lat * Math.PI/180)) / Math.PI) / 2 * n - tileY) * tileSize;
+
+    // Charger les tuiles autour du point (grille 3x2)
+    const offsetsX = [-1, 0, 1];
+    const offsetsY = [-1, 0, 1];
+    const promises = [];
+
+    for(const oy of offsetsY){
+      for(const ox of offsetsX){
+        const tx = tileX + ox;
+        const ty = tileY + oy;
+        const url = `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`;
+        const drawX = 300 - pixX + ox * tileSize;
+        const drawY = 150 - pixY + oy * tileSize;
+        promises.push(
+          new Promise(res => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => { ctx.drawImage(img, drawX, drawY, tileSize, tileSize); res(); };
+            img.onerror = () => res();
+            img.src = url;
+          })
+        );
+      }
+    }
+
+    await Promise.all(promises);
+
+    // Dessine le marqueur rouge au centre
+    const cx = 300, cy = 150;
+    // Ombre
+    ctx.beginPath();
+    ctx.arc(cx, cy+2, 14, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fill();
+    // Cercle rouge
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI*2);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // Point blanc central
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI*2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    // Ligne de visée
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(cx-20, cy); ctx.lineTo(cx-14, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+14, cy); ctx.lineTo(cx+20, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy-20); ctx.lineTo(cx, cy-14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy+14); ctx.lineTo(cx, cy+20); ctx.stroke();
+
+    // Bordure de copyright OSM
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillRect(0, 280, 600, 20);
+    ctx.fillStyle = '#444';
+    ctx.font = '10px Arial';
+    ctx.fillText('© OpenStreetMap contributors | Lat: '+lat.toFixed(6)+' Lng: '+lng.toFixed(6), 6, 293);
+
+    gpsMapBase64 = canvas.toDataURL('image/jpeg', 0.92);
+    console.log('Carte générée en base64, taille:', gpsMapBase64.length);
+
+  }catch(e){
+    console.warn('Erreur génération carte:', e);
+    gpsMapBase64 = '';
+  }
+}
+
+// ===== NAVIGATION =====
+function goTo(idx){
+  document.getElementById('panel-'+cur).classList.remove('active');
+  const steps=document.querySelectorAll('.step');
+  steps[cur].classList.remove('active');steps[cur].classList.add('done');
+  cur=idx;
+  document.getElementById('panel-'+cur).classList.add('active');
+  steps[cur].classList.add('active');steps[cur].classList.remove('done');
+  updateNav();
+  if(cur===2)buildCheckTable();
+  if(cur===3)buildNcPanel();
+  if(cur===5)updateSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function next(){if(validateStep(cur)&&cur<5)goTo(cur+1);}
+function prev(){if(cur>0)goTo(cur-1);}
+function updateNav(){
+  document.getElementById('nav-info').textContent='Étape '+(cur+1)+' / 6';
+  document.getElementById('btn-prev').style.display=cur===0?'none':'';
+  const btn=document.getElementById('btn-next');
+  if(cur===5){btn.textContent='✅ Terminer le rapport';btn.onclick=finalize;}
+  else{btn.textContent='Suivant →';btn.onclick=next;}
+  document.getElementById('progressFill').style.width=((cur+1)/6*100)+'%';
+}
+
+// ===== TYPE =====
+function selectType(t){
+  selType=t;
+  ['foot','basket','hand','sol'].forEach(x=>document.getElementById('tc-'+x).className='type-card'+(x===t?' sel-'+t:''));
+  // Libellés dynamiques du bloc matériel selon type
+  const solLabels={marque:'Type de revêtement',modele:'Fabricant / Fournisseur',nserie:'Référence produit'};
+  const defLabels={marque:'Marque / Fabricant',modele:'Modèle / Référence',nserie:'N° de série / Repère'};
+  const solPh={marque:'Caoutchouc coulé / Copeaux / Sable…',modele:'Fournisseur (si connu)',nserie:'Réf. produit (si connue)'};
+  const defPh={marque:'Trigano…',modele:'Réf. xxxxx',nserie:'SN-xxxxx'};
+  const lblMap=t==='sol'?solLabels:defLabels;
+  const phMap=t==='sol'?solPh:defPh;
+  ['marque','modele','nserie'].forEach(id=>{
+    const inp=document.getElementById(id);if(!inp)return;
+    const lab=inp.closest('.field')?.querySelector('label');
+    if(lab)lab.textContent=lblMap[id];
+    inp.placeholder=phMap[id];
+  });
+  // Badge dans le header
+  const badge=document.getElementById('header-type-badge');
+  if(badge){
+    const icons={foot:'⚽',basket:'🏀',hand:'🤾',sol:'🛝'};
+    const names={foot:'Football',basket:'Basket',hand:'Handball',sol:'Sol Amortissant'};
+    badge.className='type-badge '+t;
+    badge.textContent=icons[t]+' '+names[t];
+    badge.style.display='inline-flex';
+  }
+  buildDims();if(cur===2)buildCheckTable();
+}
+function buildDims(){
+  if(!selType)return;
+  const T={foot:'But Football — NF EN 748',basket:'Panneau Basket — NF EN 1270',hand:'But Handball — NF EN 749',sol:'Sol Amortissant — NF EN 1177'};
+  document.getElementById('dims-title').textContent=(selType==='sol'?'Mesures terrain (':'Dimensions (')+(T[selType]||selType)+') — valeurs relevées';
+  const c=document.getElementById('dims-container');c.innerHTML='';
+  DIMS[selType].forEach(d=>c.insertAdjacentHTML('beforeend',`<div class="dim-field"><label>${esc(d.label)}</label><input type="text" id="${escAttr(d.id)}" placeholder="___" inputmode="decimal"/></div>`));
+}
+
+// ===== CHECK TABLE =====
+function buildCheckTable(){
+  if(!selType){document.getElementById('check-body').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Sélectionnez d\'abord un type d\'équipement</td></tr>';return;}
+  const customs=getCustomLabels();
+  let h='';
+  CHECKS[selType].forEach(item=>{
+    if(item.cat){h+=`<tr><td colspan="5" class="check-cat">${esc(item.cat)}</td></tr>`;return;}
+    const d=checkData[item.id]||{};
+    const safeId=escAttr(item.id);
+    const label=customs[item.id]||item.label;
+    const isCustom=!!customs[item.id];
+    h+=`<tr class="check-row">
+      <td class="check-label"><div class="check-label-wrap"><span class="${isCustom?'check-label-edited':''}" title="${isCustom?'Libellé personnalisé — double-clic pour modifier':'Double-clic pour modifier'}">${esc(label)}</span><button class="edit-label-btn" onclick="editCheckLabel('${safeId}')" title="Modifier le libellé">✏️</button></div></td>
+      <td style="text-align:center"><label class="radio-btn radio-c"><input type="radio" name="chk-${safeId}" ${d.val==='C'?'checked':''} onchange="setCheck('${safeId}','C')"/><div class="radio-dot">✓</div><span class="radio-lbl">C</span></label></td>
+      <td style="text-align:center"><label class="radio-btn radio-nc"><input type="radio" name="chk-${safeId}" ${d.val==='NC'?'checked':''} onchange="setCheck('${safeId}','NC')"/><div class="radio-dot">✗</div><span class="radio-lbl">NC</span></label></td>
+      <td style="text-align:center"><label class="radio-btn radio-na"><input type="radio" name="chk-${safeId}" ${d.val==='NA'?'checked':''} onchange="setCheck('${safeId}','NA')"/><div class="radio-dot">–</div><span class="radio-lbl">N/A</span></label></td>
+      <td><input class="check-obs" type="text" placeholder="Observation…" value="${escAttr(d.obs||'')}" onchange="setCheckObs('${safeId}',this.value)"/></td>
+    </tr>`;
+  });
+  document.getElementById('check-body').innerHTML=h;
+}
+function setCheck(id,val){checkData[id]={...(checkData[id]||{}),val};}
+function setCheckObs(id,obs){checkData[id]={...(checkData[id]||{}),obs};}
+
+// ===== NC PANEL (avec 2 photos par NC) =====
+function buildNcPanel(){
+  // auto-add NC depuis grille
+  if(selType){
+    CHECKS[selType].filter(i=>i.id&&checkData[i.id]?.val==='NC').forEach(item=>{
+      if(!ncRows.find(r=>r.auto_id===item.id)){
+        ncRows.push({auto_id:item.id,desc:item.label,risk:'Modéré',action:'',delai:'',photos:{}});
+      }
+    });
+  }
+  // affiche warn si auto
+  const autoCount=ncRows.filter(r=>r.auto_id).length;
+  const warn=document.getElementById('nc-warn');
+  if(warn)warn.style.display=autoCount>0?'block':'none';
+  renderNcPanel();
+}
+function renderNcPanel(){
+  const c=document.getElementById('nc-container');
+  if(!ncRows.length){c.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Aucune non-conformité — tout est conforme ✅</div>';return;}
+  c.innerHTML=ncRows.map((r,i)=>{
+    const risk=['Critique','Modéré','Mineur'].includes(r.risk)?r.risk:'Modéré';
+    return `
+    <div class="nc-item" id="nc-item-${i}">
+      <div class="nc-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="nc-num">NC ${i+1}</span>
+          <span class="risk-badge risk-${esc(risk)}">${esc(risk)}</span>
+        </div>
+        <button class="nc-del" onclick="delNc(${i})" title="Supprimer">✕</button>
+      </div>
+      <div class="nc-fields">
+        <div class="field nc-field-full"><label>Description de la non-conformité</label>
+          <input type="text" value="${escAttr(r.desc||'')}" placeholder="Description…" onchange="ncRows[${i}].desc=this.value;scheduleAutoSave()"/>
+        </div>
+        <div class="field"><label>Niveau de risque</label>
+          <select onchange="ncRows[${i}].risk=this.value;renderNcPanel();scheduleAutoSave()">
+            <option ${risk==='Critique'?'selected':''}>Critique</option>
+            <option ${risk==='Modéré'?'selected':''}>Modéré</option>
+            <option ${risk==='Mineur'?'selected':''}>Mineur</option>
+          </select>
+        </div>
+        <div class="field"><label>Délai de correction</label>
+          <input type="text" value="${escAttr(r.delai||'')}" placeholder="30 jours…" onchange="ncRows[${i}].delai=this.value;scheduleAutoSave()"/>
+        </div>
+        <div class="field nc-field-full"><label>Action corrective préconisée</label>
+          <input type="text" value="${escAttr(r.action||'')}" placeholder="Action à réaliser…" onchange="ncRows[${i}].action=this.value;scheduleAutoSave()"/>
+        </div>
+      </div>
+      <div class="nc-photos">
+        <div class="nc-photos-label">📷 Photos de la non-conformité</div>
+        <div class="nc-photo-row">
+          ${[0,1].map(p=>`
+            <div class="photo-slot" id="ncp-${i}-${p}" onclick="document.getElementById('ncp-inp-${i}-${p}').click()">
+              <input type="file" id="ncp-inp-${i}-${p}" accept="image/*" capture="environment" onchange="loadNcPhoto(${i},${p},this)"/>
+              <div class="ph-icon">📷</div>
+              <div class="ph-label">Photo ${p+1}</div>
+              <button class="photo-del" onclick="delNcPhoto(event,${i},${p})">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  // re-render photos existantes
+  ncRows.forEach((r,i)=>{[0,1].forEach(p=>{if(r.photos&&r.photos[p])renderNcPhoto(i,p,r.photos[p]);});});
+}
+function addNcRow(){ncRows.push({desc:'',risk:'Modéré',action:'',delai:'',photos:{}});renderNcPanel();}
+function delNc(i){ncRows.splice(i,1);renderNcPanel();}
+async function loadNcPhoto(ncIdx,photoIdx,inp){
+  const f=inp.files[0];if(!f)return;
+  const data=await compressImage(f,1200,900,0.82);
+  if(!ncRows[ncIdx].photos)ncRows[ncIdx].photos={};
+  ncRows[ncIdx].photos[photoIdx]=data;
+  renderNcPhoto(ncIdx,photoIdx,data);
+}
+function renderNcPhoto(ncIdx,photoIdx,src){
+  const slot=document.getElementById('ncp-'+ncIdx+'-'+photoIdx);if(!slot)return;
+  let img=slot.querySelector('img');
+  if(!img){img=document.createElement('img');slot.insertBefore(img,slot.firstChild);}
+  img.src=src;
+  slot.querySelector('.ph-icon').style.display='none';
+  slot.querySelector('.ph-label').style.display='none';
+}
+function delNcPhoto(e,ncIdx,photoIdx){
+  e.stopPropagation();
+  if(ncRows[ncIdx]&&ncRows[ncIdx].photos)delete ncRows[ncIdx].photos[photoIdx];
+  renderNcPanel();
+}
+
+// ===== GENERAL PHOTOS =====
+function buildGenPhotos(){
+  const g=document.getElementById('gen-photo-grid');if(!g)return;g.innerHTML='';
+  GEN_LABELS.forEach((label,i)=>{
+    const s=document.createElement('div');s.className='photo-slot';s.id='gp-'+i;
+    s.innerHTML=`<input type="file" id="gpi-${i}" accept="image/*" capture="environment" onchange="loadGenPhoto(${i},this)"/><div class="ph-icon">📷</div><div class="ph-label">${esc(label)}</div><button class="photo-del" onclick="delGenPhoto(event,${i})">✕</button>`;
+    s.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')document.getElementById('gpi-'+i).click();});
+    g.appendChild(s);
+    if(genPhotos[i])renderGenPhoto(i,genPhotos[i]);
+  });
+}
+async function loadGenPhoto(idx,inp){const f=inp.files[0];if(!f)return;const data=await compressImage(f,1400,1050,0.85);genPhotos[idx]=data;renderGenPhoto(idx,data);}
+function renderGenPhoto(idx,src){const s=document.getElementById('gp-'+idx);if(!s)return;let img=s.querySelector('img');if(!img){img=document.createElement('img');s.insertBefore(img,s.firstChild);}img.src=src;s.querySelector('.ph-icon').style.display='none';s.querySelector('.ph-label').style.display='none';}
+function delGenPhoto(e,idx){e.stopPropagation();delete genPhotos[idx];buildGenPhotos();}
+
+// ===== SUMMARY =====
+function updateSummary(){
+  let c=0,nc=0,na=0;Object.values(checkData).forEach(v=>{if(v.val==='C')c++;else if(v.val==='NC')nc++;else if(v.val==='NA')na++;});
+  document.getElementById('stat-c').textContent=c;document.getElementById('stat-nc').textContent=nc;document.getElementById('stat-na').textContent=na;
+  const b=document.getElementById('sum-banner');b.style.display='flex';
+  if(nc===0&&c>0){b.className='sum-banner conform';document.getElementById('sum-icon').textContent='✅';document.getElementById('sum-title').textContent='Équipement conforme';document.getElementById('sum-sub').textContent=c+' points vérifiés et conformes';if(!conclVal)setConcl('ok');}
+  else if(nc>0&&nc<=2){b.className='sum-banner reserve';document.getElementById('sum-icon').textContent='⚠️';document.getElementById('sum-title').textContent='Conforme sous réserve';document.getElementById('sum-sub').textContent=nc+' non-conformité(s) à corriger';if(!conclVal)setConcl('att');}
+  else if(nc>2){b.className='sum-banner non-conform';document.getElementById('sum-icon').textContent='🚫';document.getElementById('sum-title').textContent='Non conforme';document.getElementById('sum-sub').textContent=nc+' non-conformités détectées';if(!conclVal)setConcl('nok');}
+}
+function setConcl(v){conclVal=v;['ok','att','nok'].forEach(x=>document.getElementById('concl-'+x).className='concl-opt'+(x===v?' sel-'+v:''));}
+
+// ===== SIGNATURE =====
+function initSig(id){
+  const cv=document.getElementById(id);if(!cv)return;
+  const ctx=cv.getContext('2d');let draw=false,lx,ly;
+  ctx.strokeStyle='#22d07a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  function pos(e){const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height;if(e.touches)return[(e.touches[0].clientX-r.left)*sx,(e.touches[0].clientY-r.top)*sy];return[(e.clientX-r.left)*sx,(e.clientY-r.top)*sy];}
+  cv.addEventListener('mousedown',e=>{draw=true;[lx,ly]=pos(e);});
+  cv.addEventListener('mousemove',e=>{if(!draw)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];});
+  cv.addEventListener('mouseup',()=>draw=false);cv.addEventListener('mouseleave',()=>draw=false);
+  cv.addEventListener('touchstart',e=>{e.preventDefault();draw=true;[lx,ly]=pos(e);},{passive:false});
+  cv.addEventListener('touchmove',e=>{e.preventDefault();if(!draw)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];},{passive:false});
+  cv.addEventListener('touchend',()=>draw=false);
+}
+function clearSig(id){const c=document.getElementById(id);c.getContext('2d').clearRect(0,0,c.width,c.height);}
+
+// ===== LOGO =====
+function loadLogo(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{logoData=e.target.result;showLogoPreview(logoData);};r.readAsDataURL(f);}
+function showLogoPreview(src){const img=document.getElementById('logo-preview');const ph=document.getElementById('logo-ph');if(src){img.src=src;img.style.display='block';if(ph)ph.style.display='none';}else{img.style.display='none';if(ph)ph.style.display='block';}}
+function clearLogo(){logoData='';showLogoPreview('');document.getElementById('logo-input').value='';}
+
+// ===== HELPERS =====
+function gv(id){const e=document.getElementById(id);return e?e.value:'';}
+function toast(msg,dur=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+
+// ===== SAVE/LOAD =====
+function saveLocal(silent){
+  try{
+    localStorage.setItem('sc_data',JSON.stringify({
+      client:gv('client'),adresse:gv('adresse'),interlocuteur:gv('interlocuteur'),contact:gv('contact'),
+      technicien:gv('technicien'),date_verif:gv('date_verif'),num_rapport:gv('num_rapport'),
+      heure_debut:gv('heure_debut'),heure_fin:gv('heure_fin'),meteo:gv('meteo'),
+      marque:gv('marque'),modele:gv('modele'),nserie:gv('nserie'),annee_pose:gv('annee_pose'),localisation:gv('localisation'),
+      selType,checkData,ncRows,conclVal,obs_generale:gv('obs_generale'),genPhotos,
+      gpsLat,gpsLng,gpsAdresse,gpsMapBase64,
+      _savedAt:Date.now()
+    }));
+    if(!silent) toast('💾 Sauvegardé');
+  }catch(e){ if(!silent) toast('⚠️ Erreur sauvegarde (quota ?)'); }
+}
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem('sc_data');if(!raw)return;const d=JSON.parse(raw);
+    ['client','adresse','interlocuteur','contact','technicien','date_verif','num_rapport','heure_debut','heure_fin','meteo','marque','modele','nserie','annee_pose','localisation','obs_generale'].forEach(k=>{if(d[k]&&document.getElementById(k))document.getElementById(k).value=d[k];});
+    if(d.selType){selType=d.selType;buildDims();document.getElementById('tc-'+d.selType).className='type-card sel-'+d.selType;selectType(d.selType);}
+    if(d.checkData)checkData=d.checkData;
+    if(d.ncRows)ncRows=d.ncRows;
+    if(d.conclVal)conclVal=d.conclVal;
+    if(d.genPhotos)genPhotos=d.genPhotos;
+    if(typeof d.gpsLat==='number'){gpsLat=d.gpsLat;gpsLng=d.gpsLng;gpsAdresse=d.gpsAdresse||'';gpsMapBase64=d.gpsMapBase64||'';if(gpsLat)afficherCarte(gpsLat,gpsLng);}
+    if(d._savedAt) toast('📂 Brouillon restauré');
+  }catch(e){}
+}
+
+// ===== SETTINGS =====
+function getCfg(){try{return JSON.parse(localStorage.getItem('sc_config')||'{}');}catch(e){return{};}}
+function openSettings(){
+  const cfg=getCfg();
+  const map={entreprise:'cfg-entreprise',adresseSoc:'cfg-adresse-soc',contactSoc:'cfg-contact-soc',agrement:'cfg-agrement',techDefaut:'cfg-tech-defaut',gmailClientId:'cfg-gmail-clientid',emailDest:'cfg-email-dest',gdriveClientId:'cfg-gdrive-clientid',gdriveFolder:'cfg-gdrive-folder'};
+  Object.entries(map).forEach(([k,id])=>{if(cfg[k]&&document.getElementById(id))document.getElementById(id).value=cfg[k];});
+  if(!gv('cfg-email-dest'))document.getElementById('cfg-email-dest').value='adv.gsemu@gmail.com';
+  if(logoData)showLogoPreview(logoData);
+  document.getElementById('modal-settings').classList.remove('hidden');
+  const localInfo=document.getElementById('local-mode-info');
+  if(localInfo)localInfo.style.display=IS_LOCAL?'block':'none';
+}
+function closeSettings(){document.getElementById('modal-settings').classList.add('hidden');}
+function saveSettings(){
+  const cfg={entreprise:gv('cfg-entreprise'),adresseSoc:gv('cfg-adresse-soc'),contactSoc:gv('cfg-contact-soc'),agrement:gv('cfg-agrement'),techDefaut:gv('cfg-tech-defaut'),gmailClientId:gv('cfg-gmail-clientid'),emailDest:gv('cfg-email-dest')||'adv.gsemu@gmail.com',gdriveClientId:gv('cfg-gdrive-clientid'),gdriveFolder:gv('cfg-gdrive-folder')};
+  if(logoData)cfg.logo=logoData;
+  localStorage.setItem('sc_config',JSON.stringify(cfg));
+  closeSettings();toast('✅ Paramètres enregistrés');
+}
+function loadCfgToState(){
+  const cfg=getCfg();
+  if(cfg.techDefaut&&!gv('technicien'))document.getElementById('technicien').value=cfg.techDefaut;
+  if(cfg.logo){logoData=cfg.logo;}
+}
+
+// ===== BUILD HTML REPORT =====
+function buildReportHtml(){
+  const TN={foot:'But de Football — NF EN 748',basket:'Panneau de Basket — NF EN 1270',hand:'But de Handball — NF EN 749',sol:'Sol Amortissant — NF EN 1177'};
+  const TE={foot:'⚽',basket:'🏀',hand:'🤾',sol:'🛝'};
+  const MAT={marque:type==='sol'?'Type de revêtement':'Marque',modele:type==='sol'?'Fabricant / Fournisseur':'Modèle / Réf.',nserie:type==='sol'?'Réf. produit':'N° série'};
+  const type=selType||'';const cfg=getCfg();
+  let c=0,nc=0,na=0;Object.values(checkData).forEach(v=>{if(v.val==='C')c++;else if(v.val==='NC')nc++;else if(v.val==='NA')na++;});
+  const sT=document.getElementById('sig-tech').toDataURL();
+  const sC=document.getElementById('sig-client').toDataURL();
+  const concl=type==='sol'
+    ?{ok:'✅ Sol amortissant conforme — zone de jeu autorisée',att:'⚠️ Conforme sous réserve — actions correctives à planifier (délai limité)',nok:'🚫 Sol non conforme — fermeture de la zone de jeu recommandée'}
+    :{ok:'✅ Équipement conforme — utilisation autorisée',att:'⚠️ Conforme sous réserve — actions correctives à planifier',nok:'🚫 Non conforme — mise hors service immédiate recommandée'};
+  const cColor={ok:'#27ae60',att:'#e67e22',nok:'#c0392b'};
+
+  // Valide qu'une dataURL image est sûre (prévient injection de schéma)
+  const safeDataUrl=(s)=>{ if(!s)return''; const t=String(s); return /^data:image\/(png|jpe?g|webp|gif);base64,/.test(t)?t:''; };
+
+  // Check HTML
+  const reportCustomLabels=getCustomLabels();
+  let ckH='';
+  if(type&&CHECKS[type])CHECKS[type].forEach(item=>{
+    if(item.cat){ckH+=`<tr style="background:#f5f5f5;"><td colspan="3" style="background:#f5f5f5;font-weight:700;font-size:10px;padding:5px 8px;border:1px solid #ddd;text-transform:uppercase;letter-spacing:0.5px;color:#333;">${esc(item.cat)}</td></tr>`;return;}
+    const d=checkData[item.id]||{};
+    const cv=d.val==='C'?'✓ C':d.val==='NC'?'✗ NC':d.val==='NA'?'– N/A':'';
+    const cc=d.val==='C'?'#27ae60':d.val==='NC'?'#c0392b':'#999';
+    const lbl=reportCustomLabels[item.id]||item.label;
+    ckH+=`<tr style="background:white;"><td style="padding:7px 8px;border:1px solid #ddd;font-size:11px;background:white;color:#111;">${esc(lbl)}</td><td style="padding:7px 8px;border:1px solid #ddd;text-align:center;font-weight:700;color:${cc};font-size:11px;background:white;">${cv}</td><td style="padding:7px 8px;border:1px solid #ddd;font-size:11px;color:#666;background:white;">${esc(d.obs||'')}</td></tr>`;
+  });
+
+  // NC HTML (avec photos)
+  let ncH='';
+  ncRows.forEach((r,i)=>{
+    const risk=['Critique','Modéré','Mineur'].includes(r.risk)?r.risk:'Modéré';
+    const rc=risk==='Critique'?'#c0392b':risk==='Modéré'?'#e67e22':'#2980b9';
+    const rcbg=risk==='Critique'?'#fef5f5':risk==='Modéré'?'#fffbf0':'#f0f7ff';
+    let photosHtml='';
+    if(r.photos){[0,1].forEach(p=>{ const u=safeDataUrl(r.photos[p]); if(u)photosHtml+=`<img src="${u}" style="width:140px;height:105px;object-fit:cover;border-radius:4px;border:1px solid #ddd;margin:4px;" alt="Photo NC ${i+1}"/>`});}
+    ncH+=`
+      <div style="border:1px solid #ddd;border-radius:6px;margin-bottom:12px;overflow:hidden;">
+        <div style="background:${rcbg};border-bottom:1px solid #eee;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:12px">NC ${i+1} — ${esc(r.desc||'')}</strong>
+          <span style="background:${rc};color:white;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">${esc(risk)}</span>
+        </div>
+        <div style="padding:10px 12px;font-size:11px;">
+          <div><strong>Action préconisée :</strong> ${esc(r.action||'—')}</div>
+          <div style="margin-top:4px;"><strong>Délai :</strong> ${esc(r.delai||'—')}</div>
+          ${photosHtml?`<div style="margin-top:8px;">${photosHtml}</div>`:''}
+        </div>
+      </div>`;
+  });
+
+  // General photos HTML
+  let gpH='';Object.entries(genPhotos).forEach(([i,src])=>{ const u=safeDataUrl(src); if(u)gpH+=`<div style="display:inline-block;margin:4px;vertical-align:top;text-align:center"><img src="${u}" style="width:155px;height:116px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" alt="Photo générale"/><div style="font-size:9px;color:#888;margin-top:2px">${esc(GEN_LABELS[i]||'')}</div></div>`;});
+
+  // Logo + en-tête
+  const safeLogo=safeDataUrl(logoData);
+  const logoHtml=safeLogo?`<img src="${safeLogo}" style="max-height:55px;max-width:160px;object-fit:contain;" alt="Logo"/>`:
+    `<div style="font-weight:800;font-size:18px;color:#1a6b4a">${esc(cfg.entreprise||'SportCheck')}</div>`;
+
+  // Signatures : ne garder que si canvas data URL valide
+  const sigT=/^data:image\/(png|jpeg|webp);base64,/.test(sT)?sT:'';
+  const sigC=/^data:image\/(png|jpeg|webp);base64,/.test(sC)?sC:'';
+  const gpsMap=safeDataUrl(gpsMapBase64);
+
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>
+body,*{box-sizing:border-box;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#222;margin:0;padding:0;background:white;}
+*{background-color:transparent;}
+table{background:white!important;}
+tr{background:white!important;color:#111!important;}
+td,th{background:white!important;color:#111!important;}
+.page{max-width:800px;margin:0 auto;padding:28px 32px;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a6b4a;padding-bottom:14px;margin-bottom:20px;}
+.dref{text-align:right;font-size:11px;line-height:1.9;color:#444;}
+.sec{margin-bottom:16px;}
+.st{background:#1a6b4a;color:white;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.9px;padding:5px 12px;border-radius:4px 4px 0 0;}
+.sb{border:1px solid #d0d0d0;border-top:none;padding:12px 14px;border-radius:0 0 4px 4px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.f label{font-size:9px;color:#888;font-weight:700;display:block;text-transform:uppercase;letter-spacing:0.5px;}
+.f span{font-size:11px;border-bottom:1px solid #eee;display:block;min-height:16px;padding-bottom:2px;margin-top:1px;}
+table{width:100%;border-collapse:collapse;background:white;}th{background:#f5f5f5!important;color:#333!important;font-size:10px;padding:6px 8px;text-align:left;border:1px solid #ddd;font-weight:700;}td{background:white!important;color:#111!important;}
+.sg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+.s{text-align:center;padding:10px;border:1px solid #d0d0d0;border-radius:5px;}
+.sv{font-size:22px;font-weight:800;}.sl{font-size:10px;color:#888;}
+.agrement{display:inline-block;background:#e8f5ee;color:#1a6b4a;font-size:10px;padding:3px 8px;border-radius:3px;font-weight:700;margin-top:5px;}
+.footer{margin-top:20px;border-top:1px solid #e0e0e0;padding-top:8px;display:flex;justify-content:space-between;font-size:9px;color:#aaa;}
+@media print{body{margin:0;}@page{margin:12mm;size:A4;}}
+</style></head><body><div class="page">
+<div class="header">
+  <div>
+    ${logoHtml}
+    ${cfg.entreprise?`<div style="font-size:12px;color:#222;font-weight:700;margin-top:4px;">${esc(cfg.entreprise)}</div>`:''}
+    ${cfg.adresseSoc?`<div style="font-size:10px;color:#555;margin-top:2px;">${esc(cfg.adresseSoc)}</div>`:''}
+    ${cfg.contactSoc?`<div style="font-size:10px;color:#777;margin-top:1px;">${esc(cfg.contactSoc)}</div>`:''}
+    ${cfg.agrement?`<div class="agrement">Agrément : ${esc(cfg.agrement)}</div>`:''}
+    <div style="margin-top:8px;display:inline-block;background:#e8f5ee;color:#1a6b4a;font-weight:700;font-size:12px;padding:4px 10px;border-radius:4px;">${TE[type]||''} ${esc(TN[type]||'—')}</div>
+  </div>
+  <div class="dref">
+    <strong style="font-size:13px">${type==='sol'?'RAPPORT DE TEST — SOL AMORTISSANT':'RAPPORT DE VÉRIFICATION'}</strong><br/>
+    <strong>N° : ${esc(gv('num_rapport'))}</strong><br/>
+    Date : ${esc(gv('date_verif'))}<br/>
+    Technicien : ${esc(gv('technicien'))}<br/>
+    ${gv('heure_debut')?'Horaires : '+esc(gv('heure_debut'))+' – '+esc(gv('heure_fin')):''}
+  </div>
+</div>
+<div class="sec"><div class="st">1 · Identification du site</div><div class="sb">
+  <div class="g2" style="margin-bottom:10px;">
+    <div class="f"><label>Client / Établissement</label><span>${esc(gv('client'))}</span></div>
+    <div class="f"><label>Adresse</label><span>${esc(gv('adresse'))}</span></div>
+    <div class="f"><label>Interlocuteur</label><span>${esc(gv('interlocuteur'))}</span></div>
+    <div class="f"><label>Contact</label><span>${esc(gv('contact'))}</span></div>
+  </div>
+  ${gpsLat ? `
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;">
+    <div style="font-size:9px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">📍 Géolocalisation GPS</div>
+    <div style="font-size:11px;color:#333;margin-bottom:8px;">Coordonnées : <strong>${Number(gpsLat).toFixed(6)}, ${Number(gpsLng).toFixed(6)}</strong></div>
+    ${gpsMap ?
+      `<img src="${gpsMap}" style="width:100%;height:auto;border-radius:4px;border:1px solid #ddd;display:block;" alt="Carte GPS du site"/>` :
+      `<div style="background:#f5f5f5;padding:10px;border-radius:4px;font-size:11px;color:#888;text-align:center;border:1px solid #ddd;">
+        📍 https://www.openstreetmap.org/?mlat=${Number(gpsLat)}&amp;mlon=${Number(gpsLng)}#map=18/${Number(gpsLat)}/${Number(gpsLng)}
+       </div>`
+    }
+  </div>` : ''}
+</div></div>
+<div class="sec"><div class="st">2 · ${type==='sol'?'Identification du revêtement':'Identification du matériel'}</div><div class="sb"><div class="g3">
+  <div class="f"><label>${esc(MAT.marque)}</label><span>${esc(gv('marque'))}</span></div>
+  <div class="f"><label>${esc(MAT.modele)}</label><span>${esc(gv('modele'))}</span></div>
+  <div class="f"><label>${esc(MAT.nserie)}</label><span>${esc(gv('nserie'))}</span></div>
+  <div class="f"><label>Année de pose</label><span>${esc(gv('annee_pose'))}</span></div>
+  <div class="f"><label>Localisation</label><span>${esc(gv('localisation'))}</span></div>
+  <div class="f"><label>Météo</label><span>${esc(gv('meteo'))}</span></div>
+</div></div></div>
+<div class="sec"><div class="st">3 · Grille de contrôle</div><div class="sb">
+  <div class="sg">
+    <div class="s"><div class="sv" style="color:#27ae60">${c}</div><div class="sl">Conformes</div></div>
+    <div class="s"><div class="sv" style="color:#c0392b">${nc}</div><div class="sl">Non conformes</div></div>
+    <div class="s"><div class="sv" style="color:#888">${na}</div><div class="sl">Sans objet</div></div>
+  </div>
+  <table><thead><tr><th style="width:52%">Point de contrôle</th><th style="width:11%;text-align:center">Résultat</th><th>Observation</th></tr></thead><tbody>${ckH}</tbody></table>
+</div></div>
+${ncRows.length?`<div class="sec"><div class="st">4 · Non-conformités et actions correctives</div><div class="sb">${ncH}</div></div>`:''}
+${gpH?`<div class="sec"><div class="st">5 · Photos générales</div><div class="sb" style="text-align:center">${gpH}</div></div>`:''}
+<div class="sec"><div class="st">6 · Conclusion</div><div class="sb">
+  <div style="font-weight:700;font-size:13px;color:${cColor[conclVal]||'#333'};padding:10px;background:#fafafa;border-radius:4px;margin-bottom:10px;">${esc(concl[conclVal]||'—')}</div>
+  ${gv('obs_generale')?`<div style="font-size:11px;color:#555;padding:10px;background:#fafafa;border-left:3px solid #1a6b4a;border-radius:0 4px 4px 0;margin-top:6px;">${esc(gv('obs_generale'))}</div>`:''}
+</div></div>
+<div class="sec"><div class="st">7 · Signatures</div><div class="sb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div><div style="font-size:10px;color:#888;margin-bottom:5px;font-weight:700">TECHNICIEN VÉRIFICATEUR<br/>${esc(gv('sig-tech-nom')||gv('technicien'))}</div>${sigT?`<img src="${sigT}" style="width:100%;height:70px;object-fit:contain;border:1px solid #eee;border-radius:4px;background:#fafafa" alt="Signature technicien"/>`:`<div style="height:70px;border:1px solid #eee;border-radius:4px;background:#fafafa"></div>`}<div style="font-size:9px;color:#bbb;margin-top:3px;text-align:center">Date : ${esc(gv('date_verif'))}</div></div>
+  <div><div style="font-size:10px;color:#888;margin-bottom:5px;font-weight:700">REPRÉSENTANT CLIENT<br/>${esc(gv('sig-client-nom'))}</div>${sigC?`<img src="${sigC}" style="width:100%;height:70px;object-fit:contain;border:1px solid #eee;border-radius:4px;background:#fafafa" alt="Signature client"/>`:`<div style="height:70px;border:1px solid #eee;border-radius:4px;background:#fafafa"></div>`}<div style="font-size:9px;color:#bbb;margin-top:3px;text-align:center">Date : ${esc(gv('date_verif'))}</div></div>
+</div></div></div>
+<div class="footer">
+  <span>${esc(cfg.entreprise||'SportCheck')}${cfg.adresseSoc?' — '+esc(cfg.adresseSoc):''}${cfg.agrement?' — Agrément : '+esc(cfg.agrement):''}</span>
+  <span>${esc(gv('num_rapport'))} · Généré le ${new Date().toLocaleDateString('fr-FR')}</span>
+</div>
+</div></body></html>`;
+}
+
+// ===== DOWNLOAD =====
+const IS_LOCAL = location.protocol === 'file:';
+
+function generateReport(){
+  lastHtml = buildReportHtml();
+  const dateStr=gv('date_verif')||new Date().toISOString().slice(0,10);
+  lastFn = (gv('num_rapport')||'rapport').replace(/\s/g,'-')+'_'+(gv('client')||'Client').replace(/[^a-zA-Z0-9]/g,'-').slice(0,20)+'_'+dateStr+'.html';
+  return lastHtml;
+}
+
+// Télécharger le rapport HTML (s'ouvre et se télécharge comme fichier)
+function generateAndDownload(){
+  downloadPdfNow();
+}
+
+// Téléchargement direct du fichier HTML rapport
+function downloadPdfNow(){
+  const html = lastHtml || generateReport();
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = lastFn||'rapport-sportcheck.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  toast('⬇️ Rapport téléchargé !');
+}
+
+// Impression dans nouvelle fenêtre
+function printNow(){
+  const html = lastHtml || generateReport();
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank');
+  if(w){
+    w.addEventListener('load',()=>{ setTimeout(()=>{ w.print(); },300); });
+    toast('🖨️ Rapport ouvert — choisissez "Enregistrer en PDF"',5000);
+  } else {
+    downloadPdfNow();
+  }
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+
+// Envoi email depuis la modal avec le destinataire saisi
+async function sendEmailNow(){
+  const dest = document.getElementById('modal-email-dest').value.trim();
+  if(!dest||!dest.includes('@')){
+    showEmailStatus('⚠️ Entrez une adresse email valide','var(--amber-bg)','var(--amber)');
+    return;
+  }
+  showEmailStatus('🔄 Envoi en cours…','var(--bg3)','var(--muted)');
+  const result = await sendEmail(dest);
+  if(result.ok){
+    showEmailStatus('✅ Email envoyé à '+dest,'var(--gbg)','var(--green)');
+  } else {
+    showEmailStatus('❌ '+result.msg,'var(--rbg)','var(--red)');
+  }
+}
+
+function showEmailStatus(msg,bg,color){
+  const el=document.getElementById('email-status');
+  if(!el)return;
+  el.style.display='block';
+  el.style.background=bg;
+  el.style.color=color;
+  el.style.border='1px solid '+color;
+  el.textContent=msg;
+}
+
+// ===== GMAIL API =====
+let gmailToken=null, gmailTokenExp=0;
+function isTokenValid(){ return gmailToken && Date.now() < gmailTokenExp - 30000; }
+async function getGmailToken(){
+  const cfg=getCfg();
+  const clientId=cfg.gmailClientId||cfg.gdriveClientId;
+  if(!clientId)throw new Error('Client ID Gmail non configuré — ouvrez ⚙️ Paramètres');
+  if(isTokenValid())return gmailToken;
+  // Nettoie token expiré
+  gmailToken=null; gTok=null;
+  return new Promise((res,rej)=>{
+    const scope=encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.file');
+    const redirect=encodeURIComponent(location.origin+location.pathname);
+    // state anti-CSRF
+    const state=Math.random().toString(36).slice(2)+Date.now().toString(36);
+    sessionStorage.setItem('oauth_state',state);
+    const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${redirect}&response_type=token&scope=${scope}&state=${encodeURIComponent(state)}&prompt=consent`;
+    const w=window.open(url,'_blank','width=520,height=620,noopener=no');
+    if(!w){rej(new Error('Popup bloqué — autorisez les popups'));return;}
+    const t=setInterval(()=>{
+      try{
+        const h=w.location.hash;
+        if(h&&h.includes('access_token')){
+          clearInterval(t);
+          const p=new URLSearchParams(h.slice(1));
+          const gotState=p.get('state');
+          if(gotState!==sessionStorage.getItem('oauth_state')){w.close();rej(new Error('État OAuth invalide'));return;}
+          const tok=p.get('access_token');
+          const exp=parseInt(p.get('expires_in')||'3600',10);
+          gmailToken=tok; gTok=tok;
+          gmailTokenExp=Date.now()+exp*1000;
+          sessionStorage.removeItem('oauth_state');
+          w.close();
+          res(tok);
+        }
+      }catch(e){}
+      if(w&&w.closed){clearInterval(t);rej(new Error('Connexion annulée'));}
+    },500);
+    // timeout global 2 min
+    setTimeout(()=>{ try{clearInterval(t);if(w&&!w.closed)w.close();}catch(e){} rej(new Error('Délai OAuth dépassé')); },120000);
+  });
+}
+
+async function sendEmail(destOverride){
+  const cfg=getCfg();
+  const dest=destOverride||(cfg.emailDest||'adv.gsemu@gmail.com');
+  if(IS_LOCAL){return sendEmailMailto(cfg,dest);}
+  try{
+    const token=await getGmailToken();
+
+    // Lire les données depuis localStorage (toujours à jour après saveLocal())
+    let d={};
+    try{ d=JSON.parse(localStorage.getItem('sc_data')||'{}'); }catch(e){}
+
+    const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball'};
+    const type=d.selType||selType||'';
+    const nc=d.ncRows||ncRows||[];
+    const cv=d.conclVal||conclVal||'';
+
+    const conclTxt=cv==='ok'?'CONFORME':cv==='att'?'CONFORME SOUS RESERVE':'NON CONFORME';
+    const conclEmoji=cv==='ok'?'[OK]':cv==='att'?'[!]':'[X]';
+
+    // Stats depuis le DOM
+    const nbC=document.getElementById('stat-c')?.textContent||'?';
+    const nbNC=document.getElementById('stat-nc')?.textContent||'?';
+    const nbNA=document.getElementById('stat-na')?.textContent||'?';
+
+    const lignesNC=nc.map((r,i)=>
+      '  '+(i+1)+'. '+r.desc+
+      '\n     Risque : '+r.risk+
+      (r.action?'\n     Action : '+r.action:'')+
+      (r.delai?'\n     Delai  : '+r.delai+' jours':'')
+    ).join('\n');
+
+    const corps =
+      '================================================\n'+
+      'RAPPORT DE VERIFICATION - SPORTCHECK\n'+
+      '================================================\n\n'+
+      'N Rapport   : '+(d.num_rapport||gv('num_rapport'))+'\n'+
+      'Date        : '+(d.date_verif||gv('date_verif'))+'\n'+
+      'Technicien  : '+(d.technicien||gv('technicien'))+'\n'+
+      ((d.heure_debut||gv('heure_debut'))?'Horaires    : '+(d.heure_debut||gv('heure_debut'))+' - '+(d.heure_fin||gv('heure_fin'))+'\n':'')+
+      ((d.meteo||gv('meteo'))?'Meteo       : '+(d.meteo||gv('meteo'))+'\n':'')+
+      '\n'+
+      '--- CLIENT ---\n'+
+      'Etablissement : '+(d.client||gv('client'))+'\n'+
+      'Adresse       : '+(d.adresse||gv('adresse'))+'\n'+
+      ((d.interlocuteur||gv('interlocuteur'))?'Interlocuteur : '+(d.interlocuteur||gv('interlocuteur'))+'\n':'')+
+      ((d.contact||gv('contact'))?'Contact       : '+(d.contact||gv('contact'))+'\n':'')+
+      '\n'+
+      '--- EQUIPEMENT ---\n'+
+      'Type          : '+(TN[type]||type||'-')+'\n'+
+      ((d.marque||gv('marque'))?'Marque        : '+(d.marque||gv('marque'))+'\n':'')+
+      ((d.modele||gv('modele'))?'Modele        : '+(d.modele||gv('modele'))+'\n':'')+
+      ((d.nserie||gv('nserie'))?'N serie       : '+(d.nserie||gv('nserie'))+'\n':'')+
+      ((d.localisation||gv('localisation'))?'Localisation  : '+(d.localisation||gv('localisation'))+'\n':'')+
+      '\n'+
+      '--- RESULTATS ---\n'+
+      'Conformes     : '+nbC+'\n'+
+      'Non conformes : '+nbNC+'\n'+
+      'Sans objet    : '+nbNA+'\n'+
+      '\n'+
+      (nc.length?
+        '--- NON-CONFORMITES ('+nc.length+') ---\n'+lignesNC+'\n\n':
+        '--- Aucune non-conformite detectee ---\n\n')+
+      '--- CONCLUSION ---\n'+
+      conclEmoji+' '+conclTxt+'\n'+
+      ((d.obs_generale||gv('obs_generale'))?'\nObservations :\n'+(d.obs_generale||gv('obs_generale'))+'\n':'')+
+      '\n================================================\n'+
+      (cfg.entreprise||'SportCheck')+
+      (cfg.adresseSoc?'\n'+cfg.adresseSoc:'')+
+      (cfg.agrement?'\nAgrement : '+cfg.agrement:'')+
+      '\n================================================';
+
+    const sujet='[SportCheck] '+(d.num_rapport||gv('num_rapport'))+
+      ' - '+(d.client||gv('client')||'Client')+
+      ' - '+conclEmoji+' '+conclTxt;
+
+    function encodeB64url(str){
+      const bytes=new TextEncoder().encode(str);
+      let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+      return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+
+    function encodeSubject(str){
+      const bytes=new TextEncoder().encode(str);
+      let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+      return '=?UTF-8?B?'+btoa(bin)+'?=';
+    }
+
+    const mime=
+      'To: '+dest+'\r\n'+
+      'From: '+(cfg.entreprise||'SportCheck')+' <'+dest+'>\r\n'+
+      'Subject: '+encodeSubject(sujet)+'\r\n'+
+      'MIME-Version: 1.0\r\n'+
+      'Content-Type: text/plain; charset=UTF-8\r\n'+
+      'Content-Transfer-Encoding: base64\r\n'+
+      '\r\n'+
+      encodeB64url(corps);
+
+    const res=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({raw:encodeB64url(mime)})
+    });
+    if(!res.ok){const err=await res.json();throw new Error(err.error?.message||'HTTP '+res.status);}
+    return{ok:true,msg:'Email envoye a '+dest};
+  }catch(e){return{ok:false,msg:'Erreur: '+(e.message||JSON.stringify(e))};}
+}
+
+function sendEmailMailto(cfg,dest){
+  const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball'};
+  const conclTxt=conclVal==='ok'?'Conforme':conclVal==='att'?'Conforme sous reserve':'Non conforme';
+  const subject=encodeURIComponent('[SportCheck] Rapport '+gv('num_rapport')+' - '+gv('client')+' - '+conclTxt);
+  const body=encodeURIComponent(
+    'Rapport de verification N° '+gv('num_rapport')+'\n'+
+    'Date       : '+gv('date_verif')+'\n'+
+    'Technicien : '+gv('technicien')+'\n'+
+    'Client     : '+gv('client')+'\n'+
+    'Adresse    : '+gv('adresse')+'\n'+
+    'Equipement : '+(TN[selType]||'-')+'\n'+
+    'NC         : '+ncRows.length+' non-conformite(s)\n'+
+    'Conclusion : '+conclTxt+'\n\n'+
+    'Le rapport PDF a ete genere et imprime.\n\n'+
+    (cfg.entreprise||'SportCheck')+(cfg.adresseSoc?'\n'+cfg.adresseSoc:'')
+  );
+  window.location.href='mailto:'+dest+'?subject='+subject+'&body='+body;
+  return{ok:true,msg:'Client mail ouvert (Gmail, Outlook, etc.)'};
+}
+
+// ===== GOOGLE DRIVE =====
+async function uploadToDrive(){
+  const cfg=getCfg();
+  // Mode local : propose téléchargement HTML à la place
+  if(IS_LOCAL){generateAndDownload();return{ok:true,msg:'Rapport PDF ouvert (Drive indispo en local)'};}
+  if(!cfg.gdriveClientId)return{ok:false,msg:'Google Drive non configuré'};
+  try{
+    // Utilise le même flux OAuth validé (scope drive.file inclus)
+    const token = await getGmailToken();
+    const folderId = (cfg.gdriveFolder||'').trim();
+    // Nom sans extension .html → Drive le convertit en Google Doc éditable
+    const docName = (lastFn||'rapport-sportcheck').replace(/\.html$/i,'');
+    const meta = folderId
+      ? {name:docName, parents:[folderId], mimeType:'application/vnd.google-apps.document'}
+      : {name:docName, mimeType:'application/vnd.google-apps.document'};
+    // Le contenu HTML est converti automatiquement en Google Doc par l'API Drive
+    const blob=new Blob([lastHtml],{type:'text/html'});
+    const form=new FormData();
+    form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+    form.append('file',blob);
+    const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
+    if(!res.ok){
+      // Token probablement expiré → force re-auth au prochain appel
+      if(res.status===401){gmailToken=null;gmailTokenExp=0;gTok=null;}
+      throw new Error('HTTP '+res.status);
+    }
+    const data=await res.json();
+    // SÉCURITÉ : on ne rend PAS le fichier public. Le propriétaire peut
+    // partager manuellement via Drive si besoin. Le lien webViewLink
+    // fonctionne pour toute personne avec accès (propriétaire + invités).
+    // Google Doc → lien d'édition directe (modifiable, corrigeable)
+    const driveLink=data.webViewLink||('https://docs.google.com/document/d/'+data.id+'/edit');
+    lastDriveLink=driveLink;
+    return{ok:true,msg:'📄 Google Doc créé — modifiable sur Drive ✓',link:driveLink};
+  }catch(e){return{ok:false,msg:'Erreur Drive: '+(e.message||'inconnue')};}
+}
+// Drive: dossier géré par ID direct dans les paramètres
+
+// ===== FINALIZE =====
+async function finalize(){
+  saveLocal(true);
+  generateReport();
+  // Sauvegarde historique (IndexedDB) — non bloquant
+  try{
+    const id = (gv('num_rapport')||('RPT-'+Date.now()));
+    await saveRapportHistory({
+      id,
+      num: gv('num_rapport'),
+      client: gv('client'),
+      adresse: gv('adresse'),
+      technicien: gv('technicien'),
+      date: gv('date_verif')||new Date().toISOString().slice(0,10),
+      type: selType,
+      conclusion: conclVal,
+      stats: {c:parseInt(document.getElementById('stat-c').textContent||'0'),nc:parseInt(document.getElementById('stat-nc').textContent||'0'),na:parseInt(document.getElementById('stat-na').textContent||'0')},
+      html: lastHtml,
+      driveLink: lastDriveLink||'',
+      createdAt: Date.now()
+    });
+  }catch(e){console.warn('Save history',e);}
+
+  // Pré-rempli email
+  const cfgEmail = getCfg().emailDest||'adv.gsemu@gmail.com';
+  const emailInput = document.getElementById('modal-email-dest');
+  if(emailInput) emailInput.value = cfgEmail;
+  const statusEl = document.getElementById('email-status');
+  if(statusEl) statusEl.style.display='none';
+
+  document.getElementById('modal-success').classList.remove('hidden');
+
+  // Sauvegarde Drive automatique en arrière-plan
+  const cfg = getCfg();
+  if(cfg.gdriveClientId){
+    showEmailStatus('☁️ Création du Google Doc en cours…','var(--bg3)','var(--muted)');
+    const result = await uploadToDrive();
+    if(result.ok){
+      showEmailStatus('✅ Rapport sauvegardé : '+lastFn,'var(--gbg)','var(--green)');
+    } else {
+      showEmailStatus('⚠️ Drive: '+result.msg,'var(--abg)','var(--amber)');
+    }
+  }
+}
+
+// ===== RESET =====
+function resetApp(){
+  localStorage.removeItem('sc_data');
+  ['client','adresse','interlocuteur','contact','technicien','date_verif','num_rapport','heure_debut','heure_fin','meteo','marque','modele','nserie','annee_pose','localisation','obs_generale','sig-tech-nom','sig-client-nom'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('date_verif').valueAsDate=new Date();
+  const cfg=getCfg();if(cfg.techDefaut)document.getElementById('technicien').value=cfg.techDefaut;
+  document.getElementById('num_rapport').value=genererNumRapport();
+  selType=null;checkData={};ncRows=[];conclVal=null;genPhotos={};lastHtml='';lastDriveLink='';gpsLat=null;gpsLng=null;gpsAdresse='';gpsMapBase64='';
+  // Remet map preview à l'état initial
+  const mp=document.getElementById('map-preview');
+  if(mp){mp.replaceChildren();const ph=document.createElement('div');ph.className='map-ph';ph.innerHTML='<span style="font-size:28px;">🗺️</span><span>La carte apparaîtra après la détection GPS</span>';mp.appendChild(ph);}
+  const gi=document.getElementById('gps-info');if(gi){gi.className='gps-info';gi.textContent='Appuyez sur 📍 pour détecter automatiquement l\'adresse';}
+  ['foot','basket','hand'].forEach(t=>document.getElementById('tc-'+t).className='type-card');
+  document.getElementById('dims-container').innerHTML='<div style="color:var(--muted);font-size:13px;">Sélectionnez d\'abord un type d\'équipement</div>';
+  document.getElementById('dims-title').textContent='Dimensions réglementaires — valeurs mesurées';
+  clearSig('sig-tech');clearSig('sig-client');
+  buildGenPhotos();
+  document.getElementById('nc-container').innerHTML='';
+  document.getElementById('stat-c').textContent='0';document.getElementById('stat-nc').textContent='0';document.getElementById('stat-na').textContent='0';
+  document.getElementById('sum-banner').style.display='none';
+  document.querySelectorAll('.step').forEach(s=>s.className='step');
+  for(let i=0;i<=5;i++)document.getElementById('panel-'+i).classList.remove('active');
+  cur=0;document.getElementById('panel-0').classList.add('active');
+  document.querySelectorAll('.step')[0].classList.add('active');
+  updateNav();
+  document.getElementById('modal-success').classList.add('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('✚ Nouveau rapport prêt !');
+}
+
+// ===== HISTORIQUE UI =====
+async function openHistory(){
+  const list=document.getElementById('history-list');
+  list.replaceChildren();
+  const rows=await listRapports();
+  if(!rows.length){
+    const p=document.createElement('div');
+    p.style.cssText='text-align:center;padding:32px 12px;color:var(--muted);font-size:13px;';
+    p.textContent='Aucun rapport enregistré pour le moment.';
+    list.appendChild(p);
+  } else {
+    rows.forEach(r=>{
+      const concl=r.conclusion==='ok'?'✅ Conforme':r.conclusion==='att'?'⚠️ Sous réserve':r.conclusion==='nok'?'🚫 Non conforme':'—';
+      const card=document.createElement('div');
+      card.style.cssText='background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rsm);padding:12px;margin-bottom:8px;';
+      // Construction via textContent pour éviter toute XSS
+      const title=document.createElement('div');
+      title.style.cssText='font-weight:700;font-size:14px;margin-bottom:4px;';
+      title.textContent=r.num||r.id;
+      const meta=document.createElement('div');
+      meta.style.cssText='font-size:12px;color:var(--muted);margin-bottom:6px;';
+      meta.textContent=`${r.date||''} · ${r.client||'—'} · ${r.technicien||'—'}`;
+      const bar=document.createElement('div');
+      bar.style.cssText='font-size:11px;color:var(--muted);margin-bottom:8px;';
+      bar.textContent=`${concl} · C:${r.stats?.c||0}  NC:${r.stats?.nc||0}  N/A:${r.stats?.na||0}`;
+      const actions=document.createElement('div');
+      actions.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
+      const bView=document.createElement('button');
+      bView.className='btn btn-ghost btn-sm'; bView.textContent='👁️ Ouvrir';
+      bView.onclick=()=>{
+        const blob=new Blob([r.html||''],{type:'text/html;charset=utf-8'});
+        const url=URL.createObjectURL(blob);
+        window.open(url,'_blank');
+        setTimeout(()=>URL.revokeObjectURL(url),30000);
+      };
+      const bDl=document.createElement('button');
+      bDl.className='btn btn-ghost btn-sm'; bDl.textContent='⬇️';
+      bDl.onclick=()=>{
+        const blob=new Blob([r.html||''],{type:'text/html;charset=utf-8'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url;
+        a.download=(r.num||'rapport')+'.html';
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(url),5000);
+      };
+      const bDel=document.createElement('button');
+      bDel.className='btn btn-ghost btn-sm'; bDel.textContent='🗑️';
+      bDel.style.color='var(--red)';
+      bDel.onclick=async()=>{
+        if(!confirm('Supprimer définitivement ce rapport ?')) return;
+        await deleteRapport(r.id); openHistory();
+      };
+      actions.append(bView,bDl,bDel);
+      if(r.driveLink){
+        const bDrive=document.createElement('a');
+        bDrive.className='btn btn-ghost btn-sm';
+        bDrive.textContent='☁️ Drive';
+        bDrive.href=r.driveLink;
+        bDrive.target='_blank';
+        bDrive.rel='noopener noreferrer';
+        actions.appendChild(bDrive);
+      }
+      card.append(title,meta,bar,actions);
+      list.appendChild(card);
+    });
+  }
+  document.getElementById('modal-history').classList.remove('hidden');
+}
+function closeHistory(){document.getElementById('modal-history').classList.add('hidden');}
+
+// ferme modal en cliquant dehors
+document.getElementById('modal-settings').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
+document.getElementById('modal-history').addEventListener('click',e=>{if(e.target===e.currentTarget)closeHistory();});
+
+// ===== PWA INSTALL =====
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  const banner=document.getElementById('pwa-banner');
+  if(banner)banner.style.display='flex';
+});
+const installBtn=document.getElementById('pwa-install-btn');
+if(installBtn)installBtn.addEventListener('click',async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted')toast('✅ SportCheck installé !');
+  deferredPrompt=null;
+  document.getElementById('pwa-banner').style.display='none';
+});
+window.addEventListener('appinstalled',()=>{toast('✅ SportCheck installé avec succès !');document.getElementById('pwa-banner').style.display='none';});
+
+// Détection iOS - instructions manuelles
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+const isInStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+if(isIOS&&!isInStandalone){
+  setTimeout(()=>{
+    const banner=document.getElementById('pwa-banner');
+    if(banner){
+      banner.style.display='flex';
+      banner.querySelector('span').textContent='📲 Installer sur iPhone';
+      banner.querySelector("span+br+span").textContent="Safari → Partager → Sur l\'ecran d\'accueil";
+      document.getElementById('pwa-install-btn').style.display='none';
+    }
+  },3000);
+}
+</script>
+</body>
+</html>
