@@ -1467,30 +1467,43 @@ function generateAndDownload(){
 
 // Téléchargement direct du fichier HTML rapport
 function downloadPdfNow(){
-  const html = lastHtml || generateReport();
-  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = lastFn||'rapport-sportcheck.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
-  toast('⬇️ Rapport téléchargé !');
+  try{
+    const html = lastHtml || generateReport();
+    const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    // iOS Safari : ouvre dans un nouvel onglet (l'utilisateur peut ensuite
+    // faire Partager → Enregistrer dans Fichiers ou Imprimer → PDF)
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isIOS){
+      window.location.href = url;
+      toast('📄 Rapport ouvert — Partager → Enregistrer / Imprimer',5000);
+    } else {
+      const a = document.createElement('a');
+      a.href = url; a.download = lastFn||'rapport-sportcheck.html';
+      a.style.display='none';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      toast('⬇️ Rapport téléchargé !');
+    }
+  }catch(e){ toast('⚠️ Erreur PDF : '+e.message,4000); console.error(e); }
 }
 
 // Impression dans nouvelle fenêtre
 function printNow(){
-  const html = lastHtml || generateReport();
-  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url,'_blank');
-  if(w){
-    w.addEventListener('load',()=>{ setTimeout(()=>{ w.print(); },300); });
-    toast('🖨️ Rapport ouvert — choisissez "Enregistrer en PDF"',5000);
-  } else {
-    downloadPdfNow();
-  }
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  try{
+    const html = lastHtml || generateReport();
+    const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url,'_blank');
+    if(w){
+      w.addEventListener('load',()=>{ setTimeout(()=>{ w.print(); },400); });
+      toast('🖨️ Rapport ouvert — choisissez "Enregistrer en PDF"',5000);
+    } else {
+      // Popup bloqué (mobile) → téléchargement direct
+      downloadPdfNow();
+    }
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }catch(e){ toast('⚠️ Erreur impression : '+e.message,4000); console.error(e); }
 }
 
 // Envoi email depuis la modal avec le destinataire saisi
@@ -1730,7 +1743,13 @@ async function uploadToDrive(){
 // ===== FINALIZE =====
 async function finalize(){
   saveLocal(true);
-  generateReport();
+  // Génération du rapport — avec gestion d'erreur explicite
+  try{ generateReport(); }
+  catch(e){
+    toast('⚠️ Erreur rapport : '+e.message,4000);
+    console.error('buildReport',e);
+    return; // stoppe ici si la génération échoue
+  }
   // Sauvegarde historique (IndexedDB) — non bloquant
   try{
     const id = (gv('num_rapport')||('RPT-'+Date.now()));
@@ -1784,7 +1803,7 @@ function resetApp(){
   const mp=document.getElementById('map-preview');
   if(mp){mp.replaceChildren();const ph=document.createElement('div');ph.className='map-ph';ph.innerHTML='<span style="font-size:28px;">🗺️</span><span>La carte apparaîtra après la détection GPS</span>';mp.appendChild(ph);}
   const gi=document.getElementById('gps-info');if(gi){gi.className='gps-info';gi.textContent='Appuyez sur 📍 pour détecter automatiquement l\'adresse';}
-  ['foot','basket','hand'].forEach(t=>document.getElementById('tc-'+t).className='type-card');
+  ['foot','basket','hand','sol'].forEach(t=>document.getElementById('tc-'+t).className='type-card');
   document.getElementById('dims-container').innerHTML='<div style="color:var(--muted);font-size:13px;">Sélectionnez d\'abord un type d\'équipement</div>';
   document.getElementById('dims-title').textContent='Dimensions réglementaires — valeurs mesurées';
   clearSig('sig-tech');clearSig('sig-client');
