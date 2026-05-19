@@ -1294,10 +1294,10 @@ function loadCfgToState(){
 
 // ===== BUILD HTML REPORT =====
 function buildReportHtml(){
+  const type=selType||'';const cfg=getCfg();
   const TN={foot:'But de Football — NF EN 748',basket:'Panneau de Basket — NF EN 1270',hand:'But de Handball — NF EN 749',sol:'Sol Amortissant — NF EN 1177'};
   const TE={foot:'⚽',basket:'🏀',hand:'🤾',sol:'🛝'};
   const MAT={marque:type==='sol'?'Type de revêtement':'Marque',modele:type==='sol'?'Fabricant / Fournisseur':'Modèle / Réf.',nserie:type==='sol'?'Réf. produit':'N° série'};
-  const type=selType||'';const cfg=getCfg();
   let c=0,nc=0,na=0;Object.values(checkData).forEach(v=>{if(v.val==='C')c++;else if(v.val==='NC')nc++;else if(v.val==='NA')na++;});
   const sT=document.getElementById('sig-tech').toDataURL();
   const sC=document.getElementById('sig-client').toDataURL();
