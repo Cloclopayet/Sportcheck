@@ -1067,6 +1067,11 @@ function selectType(t){
     badge.style.display='inline-flex';
   }
   buildDims();if(cur===2)buildCheckTable();
+  // Adapter les labels de conclusion selon le type
+  const isSol=t==='sol';
+  const elOk=document.getElementById('concl-ok');const elNok=document.getElementById('concl-nok');
+  if(elOk){const ct=elOk.querySelector('.concl-text');if(ct)ct.innerHTML=isSol?'<strong>Sol amortissant conforme</strong> — zone de jeu autorisée':'<strong>Équipement conforme</strong> — utilisation autorisée';}
+  if(elNok){const ct=elNok.querySelector('.concl-text');if(ct)ct.innerHTML=isSol?'<strong>Sol non conforme</strong> — fermeture de la zone de jeu recommandée':'<strong>Non conforme</strong> — mise hors service immédiate recommandée';}
 }
 function buildDims(){
   if(!selType)return;
@@ -1208,9 +1213,10 @@ function updateSummary(){
   let c=0,nc=0,na=0;Object.values(checkData).forEach(v=>{if(v.val==='C')c++;else if(v.val==='NC')nc++;else if(v.val==='NA')na++;});
   document.getElementById('stat-c').textContent=c;document.getElementById('stat-nc').textContent=nc;document.getElementById('stat-na').textContent=na;
   const b=document.getElementById('sum-banner');b.style.display='flex';
-  if(nc===0&&c>0){b.className='sum-banner conform';document.getElementById('sum-icon').textContent='✅';document.getElementById('sum-title').textContent='Équipement conforme';document.getElementById('sum-sub').textContent=c+' points vérifiés et conformes';if(!conclVal)setConcl('ok');}
+  const isSol=selType==='sol';
+  if(nc===0&&c>0){b.className='sum-banner conform';document.getElementById('sum-icon').textContent='✅';document.getElementById('sum-title').textContent=isSol?'Sol amortissant conforme':'Équipement conforme';document.getElementById('sum-sub').textContent=c+' points vérifiés et conformes';if(!conclVal)setConcl('ok');}
   else if(nc>0&&nc<=2){b.className='sum-banner reserve';document.getElementById('sum-icon').textContent='⚠️';document.getElementById('sum-title').textContent='Conforme sous réserve';document.getElementById('sum-sub').textContent=nc+' non-conformité(s) à corriger';if(!conclVal)setConcl('att');}
-  else if(nc>2){b.className='sum-banner non-conform';document.getElementById('sum-icon').textContent='🚫';document.getElementById('sum-title').textContent='Non conforme';document.getElementById('sum-sub').textContent=nc+' non-conformités détectées';if(!conclVal)setConcl('nok');}
+  else if(nc>2){b.className='sum-banner non-conform';document.getElementById('sum-icon').textContent='🚫';document.getElementById('sum-title').textContent=isSol?'Sol non conforme':'Non conforme';document.getElementById('sum-sub').textContent=nc+' non-conformités détectées';if(!conclVal)setConcl('nok');}
 }
 function setConcl(v){conclVal=v;['ok','att','nok'].forEach(x=>document.getElementById('concl-'+x).className='concl-opt'+(x===v?' sel-'+v:''));}
 
@@ -1587,7 +1593,7 @@ async function sendEmail(destOverride){
     let d={};
     try{ d=JSON.parse(localStorage.getItem('sc_data')||'{}'); }catch(e){}
 
-    const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball'};
+    const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball',sol:'Sol Amortissant'};
     const type=d.selType||selType||'';
     const nc=d.ncRows||ncRows||[];
     const cv=d.conclVal||conclVal||'';
@@ -1651,27 +1657,40 @@ async function sendEmail(destOverride){
       ' - '+(d.client||gv('client')||'Client')+
       ' - '+conclEmoji+' '+conclTxt;
 
-    function encodeB64url(str){
+    function toB64(str){
       const bytes=new TextEncoder().encode(str);
       let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
-      return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      return btoa(bin);
     }
+    function encodeB64url(str){ return toB64(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+    function encodeSubject(str){ return '=?UTF-8?B?'+toB64(str)+'?='; }
 
-    function encodeSubject(str){
-      const bytes=new TextEncoder().encode(str);
-      let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
-      return '=?UTF-8?B?'+btoa(bin)+'?=';
-    }
+    // Email multipart : texte résumé + pièce jointe HTML du rapport
+    const boundary='sportcheck_'+Date.now();
+    const htmlRapport=lastHtml||buildReportHtml();
+    const htmlB64=toB64(htmlRapport).match(/.{1,76}/g).join('\r\n');
+    const nomFichier=lastFn||'rapport-sportcheck.html';
 
     const mime=
       'To: '+dest+'\r\n'+
       'From: '+(cfg.entreprise||'SportCheck')+' <'+dest+'>\r\n'+
       'Subject: '+encodeSubject(sujet)+'\r\n'+
       'MIME-Version: 1.0\r\n'+
+      'Content-Type: multipart/mixed; boundary="'+boundary+'"\r\n'+
+      '\r\n'+
+      '--'+boundary+'\r\n'+
       'Content-Type: text/plain; charset=UTF-8\r\n'+
       'Content-Transfer-Encoding: base64\r\n'+
       '\r\n'+
-      encodeB64url(corps);
+      toB64(corps).match(/.{1,76}/g).join('\r\n')+'\r\n'+
+      '\r\n'+
+      '--'+boundary+'\r\n'+
+      'Content-Type: text/html; charset=UTF-8; name="'+nomFichier+'"\r\n'+
+      'Content-Transfer-Encoding: base64\r\n'+
+      'Content-Disposition: attachment; filename="'+nomFichier+'"\r\n'+
+      '\r\n'+
+      htmlB64+'\r\n'+
+      '--'+boundary+'--';
 
     const res=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
       method:'POST',
@@ -1684,7 +1703,7 @@ async function sendEmail(destOverride){
 }
 
 function sendEmailMailto(cfg,dest){
-  const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball'};
+  const TN={foot:'But Football',basket:'Panneau Basket',hand:'But Handball',sol:'Sol Amortissant'};
   const conclTxt=conclVal==='ok'?'Conforme':conclVal==='att'?'Conforme sous reserve':'Non conforme';
   const subject=encodeURIComponent('[SportCheck] Rapport '+gv('num_rapport')+' - '+gv('client')+' - '+conclTxt);
   const body=encodeURIComponent(
