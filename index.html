@@ -1548,7 +1548,7 @@ async function getGmailToken(){
     // state anti-CSRF
     const state=Math.random().toString(36).slice(2)+Date.now().toString(36);
     sessionStorage.setItem('oauth_state',state);
-    const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${redirect}&response_type=token&scope=${scope}&state=${encodeURIComponent(state)}&prompt=consent`;
+    const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${redirect}&response_type=token&scope=${scope}&state=${encodeURIComponent(state)}&prompt=select_account`;
     const w=window.open(url,'_blank','width=520,height=620,noopener=no');
     if(!w){rej(new Error('Popup bloqué — autorisez les popups'));return;}
     const t=setInterval(()=>{
