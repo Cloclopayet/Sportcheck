@@ -1516,7 +1516,7 @@ function printNow(){
 async function sendEmailNow(){
   const dest = document.getElementById('modal-email-dest').value.trim();
   if(!dest||!dest.includes('@')){
-    showEmailStatus('⚠️ Entrez une adresse email valide','var(--amber-bg)','var(--amber)');
+    showEmailStatus('⚠️ Entrez une adresse email valide','var(--abg)','var(--amber)');
     return;
   }
   showEmailStatus('🔄 Envoi en cours…','var(--bg3)','var(--muted)');
@@ -1804,7 +1804,8 @@ async function finalize(){
     showEmailStatus('☁️ Création du Google Doc en cours…','var(--bg3)','var(--muted)');
     const result = await uploadToDrive();
     if(result.ok){
-      showEmailStatus('✅ Rapport sauvegardé : '+lastFn,'var(--gbg)','var(--green)');
+      const docTitle=(lastFn||'rapport-sportcheck').replace(/\.html$/i,'');
+      showEmailStatus('✅ Google Doc créé : '+docTitle,'var(--gbg)','var(--green)');
     } else {
       showEmailStatus('⚠️ Drive: '+result.msg,'var(--abg)','var(--amber)');
     }
@@ -1818,7 +1819,7 @@ function resetApp(){
   document.getElementById('date_verif').valueAsDate=new Date();
   const cfg=getCfg();if(cfg.techDefaut)document.getElementById('technicien').value=cfg.techDefaut;
   document.getElementById('num_rapport').value=genererNumRapport();
-  selType=null;checkData={};ncRows=[];conclVal=null;genPhotos={};lastHtml='';lastDriveLink='';gpsLat=null;gpsLng=null;gpsAdresse='';gpsMapBase64='';
+  selType=null;checkData={};ncRows=[];conclVal=null;genPhotos={};lastHtml='';lastFn='';lastDriveLink='';gpsLat=null;gpsLng=null;gpsAdresse='';gpsMapBase64='';
   // Remet map preview à l'état initial
   const mp=document.getElementById('map-preview');
   if(mp){mp.replaceChildren();const ph=document.createElement('div');ph.className='map-ph';ph.innerHTML='<span style="font-size:28px;">🗺️</span><span>La carte apparaîtra après la détection GPS</span>';mp.appendChild(ph);}
