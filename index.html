@@ -1544,7 +1544,8 @@ async function getGmailToken(){
   gmailToken=null; gTok=null;
   return new Promise((res,rej)=>{
     const scope=encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.file');
-    const redirect=encodeURIComponent(location.origin+location.pathname);
+    // URI de redirection fixe : origin + '/' (doit correspondre exactement à Google Cloud Console)
+    const redirect=encodeURIComponent(location.origin+'/');
     // state anti-CSRF
     const state=Math.random().toString(36).slice(2)+Date.now().toString(36);
     sessionStorage.setItem('oauth_state',state);
