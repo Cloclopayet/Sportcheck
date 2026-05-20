@@ -338,9 +338,63 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
   -webkit-print-color-adjust:exact;
   print-color-adjust:exact;
 }
+
+/* ===== ÉCRAN PIN ===== */
+#pin-screen{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;}
+#pin-screen.hidden{display:none;}
+.pin-card{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:0;}
+.pin-logo{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:28px;text-align:center;}
+.pin-logo span{color:var(--green);}
+.pin-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;text-align:center;}
+.pin-subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;text-align:center;line-height:1.5;}
+.pin-dots{display:flex;gap:14px;margin-bottom:10px;}
+.pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all 0.15s;}
+.pin-dot.filled{background:var(--green);border-color:var(--green);}
+.pin-dot.error{background:var(--red);border-color:var(--red);}
+.pin-error{min-height:20px;font-size:13px;color:var(--red);text-align:center;margin-bottom:16px;font-weight:500;}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:280px;margin-bottom:20px;}
+.pin-key{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);height:64px;font-size:22px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:background 0.1s,transform 0.08s;user-select:none;-webkit-user-select:none;}
+.pin-key:active{background:var(--bg4);transform:scale(0.93);}
+.pin-key.pin-empty{background:transparent;border-color:transparent;cursor:default;}
+.pin-key.pin-del{font-size:18px;}
+@keyframes pinShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+.pin-dots.shake{animation:pinShake 0.4s ease;}
+.pin-setup-step{font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px;}
+.pin-lock-msg{background:var(--rbg);border:1px solid var(--rbrd);border-radius:var(--rsm);padding:10px 14px;font-size:13px;color:var(--red);text-align:center;line-height:1.5;margin-bottom:16px;width:100%;}
 </style>
 </head>
 <body>
+
+<!-- ===== ÉCRAN CODE PIN ===== -->
+<div id="pin-screen" class="hidden">
+  <div class="pin-card">
+    <div class="pin-logo">SPORT<span>CHECK</span></div>
+    <div id="pin-title" class="pin-title">Entrez votre code</div>
+    <div id="pin-subtitle" class="pin-subtitle"></div>
+    <div id="pin-dots" class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div id="pin-error" class="pin-error"></div>
+    <div id="pin-lock-msg" class="pin-lock-msg" style="display:none;"></div>
+    <div class="pin-pad" id="pin-pad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <div class="pin-key pin-empty"></div>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key pin-del" onclick="pinDel()">⌫</button>
+    </div>
+  </div>
+</div>
 
 <div id="print-report-container"></div>
 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:16.6%"></div></div>
@@ -598,6 +652,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
       Pour toutes les fonctions : hébergez sur GitHub Pages.
     </div>
     <div class="msec">
+      <h3>🔒 Code PIN de verrouillage</h3>
+      <div id="pin-status-cfg" style="font-size:13px;color:var(--muted);margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openPinSetup('change')">🔑 Changer le code PIN</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPinSetup('master')">🛡️ Définir code maître</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="removePin()">🗑️ Supprimer le PIN</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">Le code maître permet de déverrouiller l'app si le PIN est oublié.<br/>Les codes sont stockés chiffrés sur cet appareil uniquement.</div>
+    </div>
+
+    <div class="msec">
       <h3>✏️ Libellés de contrôle</h3>
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Double-cliquez sur un libellé dans la grille de contrôle pour le modifier. Les personnalisations sont sauvegardées sur cet appareil.</div>
       <button class="reset-labels-btn" onclick="resetCustomLabels()">🔄 Réinitialiser tous les libellés aux valeurs par défaut</button>
@@ -840,6 +905,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     el.addEventListener('input', scheduleAutoSave);
     el.addEventListener('change', scheduleAutoSave);
   });
+  // Code PIN — affiche l'écran si configuré et session expirée
+  pinUpdateCfgStatus();
+  pinCheckAndShow();
 });
 
 // ===== GPS =====
@@ -1933,6 +2001,254 @@ if(installBtn)installBtn.addEventListener('click',async()=>{
   document.getElementById('pwa-banner').style.display='none';
 });
 window.addEventListener('appinstalled',()=>{toast('✅ SportCheck installé avec succès !');document.getElementById('pwa-banner').style.display='none';});
+
+// ===== CODE PIN =====
+// Stockage : sc_pin_hash (localStorage), sc_master_hash (localStorage)
+// Session  : sc_sess (sessionStorage) — efface à fermeture de l'onglet
+// Tentatives: sc_pin_att (localStorage), sc_pin_lock (localStorage)
+
+const PIN_LEN = 4;
+const PIN_SALT = 'sportcheck_2026';
+const PIN_MAX_ATT = 3;
+const PIN_LOCK_MS = 5 * 60 * 1000; // 5 min
+
+async function pinHash(code){
+  const data = new TextEncoder().encode(code + PIN_SALT);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function pinIsConfigured(){ return !!localStorage.getItem('sc_pin_hash'); }
+function pinSessionOk(){ return sessionStorage.getItem('sc_sess')==='ok'; }
+function pinIsLocked(){
+  const lockUntil=parseInt(localStorage.getItem('sc_pin_lock')||'0');
+  return Date.now()<lockUntil;
+}
+function pinLockRemaining(){
+  const lockUntil=parseInt(localStorage.getItem('sc_pin_lock')||'0');
+  const s=Math.ceil((lockUntil-Date.now())/1000);
+  return s>0?s:0;
+}
+function pinGetAttempts(){ return parseInt(localStorage.getItem('sc_pin_att')||'0'); }
+function pinSetSession(){ sessionStorage.setItem('sc_sess','ok'); }
+function pinClearSession(){ sessionStorage.removeItem('sc_sess'); }
+
+// État courant de la saisie PIN
+let _pinBuf='';
+let _pinMode='login'; // 'login' | 'setup1' | 'setup2' | 'change1' | 'change2' | 'master'
+let _pinFirst='';     // premier code lors de la confirmation
+
+function pinCheckAndShow(){
+  if(!pinIsConfigured()){ return; } // pas de PIN configuré → app ouverte
+  if(pinSessionOk()){ return; }     // déjà authentifié cette session
+  // Afficher l'écran PIN
+  document.getElementById('pin-screen').classList.remove('hidden');
+  pinSetMode('login');
+}
+
+function pinHide(){
+  document.getElementById('pin-screen').classList.add('hidden');
+}
+
+function pinSetMode(mode){
+  _pinMode=mode; _pinBuf=''; _pinFirst='';
+  pinRenderDots();
+  document.getElementById('pin-error').textContent='';
+  const title=document.getElementById('pin-title');
+  const sub=document.getElementById('pin-subtitle');
+  const lockEl=document.getElementById('pin-lock-msg');
+  const pad=document.getElementById('pin-pad');
+
+  // Gestion du blocage
+  if(mode==='login'&&pinIsLocked()){
+    const s=pinLockRemaining();
+    lockEl.style.display='block';
+    lockEl.textContent='🔒 Trop de tentatives — réessayez dans '+Math.ceil(s/60)+'min '+s%60+'s';
+    pad.style.opacity='0.3';pad.style.pointerEvents='none';
+    // Update timer every second
+    const iv=setInterval(()=>{
+      const remaining=pinLockRemaining();
+      if(remaining<=0){clearInterval(iv);lockEl.style.display='none';pad.style.opacity='';pad.style.pointerEvents='';}
+      else{lockEl.textContent='🔒 Trop de tentatives — réessayez dans '+Math.ceil(remaining/60)+'min '+remaining%60+'s';}
+    },1000);
+  } else {
+    lockEl.style.display='none';
+    pad.style.opacity='';pad.style.pointerEvents='';
+  }
+
+  if(mode==='login'){
+    title.textContent='Entrez votre code';
+    sub.textContent='Code PIN à 4 chiffres';
+  } else if(mode==='setup1'){
+    title.textContent='Créer un code PIN';
+    sub.textContent='Choisissez un code à 4 chiffres';
+  } else if(mode==='setup2'){
+    title.textContent='Confirmer le code PIN';
+    sub.textContent='Saisissez le même code à nouveau';
+  } else if(mode==='change1'){
+    title.textContent='Code PIN actuel';
+    sub.textContent='Entrez votre code actuel pour continuer';
+  } else if(mode==='change2'){
+    title.textContent='Nouveau code PIN';
+    sub.textContent='Choisissez un nouveau code à 4 chiffres';
+  } else if(mode==='change3'){
+    title.textContent='Confirmer le nouveau PIN';
+    sub.textContent='Saisissez le nouveau code à nouveau';
+  } else if(mode==='master'){
+    title.textContent='Code maître de secours';
+    sub.textContent='Choisissez un code admin (4 chiffres min)';
+  } else if(mode==='master2'){
+    title.textContent='Confirmer le code maître';
+    sub.textContent='Saisissez le code maître à nouveau';
+  }
+}
+
+function pinRenderDots(){
+  for(let i=0;i<PIN_LEN;i++){
+    const d=document.getElementById('pd'+i);
+    if(!d)continue;
+    d.className='pin-dot'+(i<_pinBuf.length?' filled':'');
+  }
+}
+
+function pinKey(k){
+  if(pinIsLocked()&&_pinMode==='login')return;
+  if(_pinBuf.length>=PIN_LEN)return;
+  _pinBuf+=k;
+  pinRenderDots();
+  if(_pinBuf.length===PIN_LEN){ setTimeout(pinSubmit,120); }
+}
+
+function pinDel(){
+  if(_pinBuf.length>0){ _pinBuf=_pinBuf.slice(0,-1); pinRenderDots(); }
+}
+
+async function pinSubmit(){
+  const code=_pinBuf; _pinBuf=''; pinRenderDots();
+  const hash=await pinHash(code);
+  const storedPin=localStorage.getItem('sc_pin_hash');
+  const storedMaster=localStorage.getItem('sc_master_hash');
+
+  if(_pinMode==='login'){
+    // Vérifie PIN ou code maître
+    if(hash===storedPin||(storedMaster&&hash===storedMaster)){
+      localStorage.setItem('sc_pin_att','0');
+      pinSetSession();
+      pinHide();
+    } else {
+      const att=pinGetAttempts()+1;
+      localStorage.setItem('sc_pin_att',att);
+      if(att>=PIN_MAX_ATT){
+        localStorage.setItem('sc_pin_lock',Date.now()+PIN_LOCK_MS);
+        localStorage.setItem('sc_pin_att','0');
+        pinSetMode('login'); // reset + affiche message blocage
+        document.getElementById('pin-error').textContent='';
+      } else {
+        pinShakeError('Code incorrect — '+(PIN_MAX_ATT-att)+' essai(s) restant(s)');
+      }
+    }
+  }
+  else if(_pinMode==='setup1'||_pinMode==='change2'){
+    _pinFirst=hash;
+    pinSetMode(_pinMode==='setup1'?'setup2':'change3');
+  }
+  else if(_pinMode==='setup2'||_pinMode==='change3'){
+    if(hash===_pinFirst){
+      localStorage.setItem('sc_pin_hash',hash);
+      localStorage.setItem('sc_pin_att','0');
+      pinSetSession();
+      pinHide();
+      toast('✅ Code PIN activé !');
+      pinUpdateCfgStatus();
+    } else {
+      pinShakeError('Codes différents — recommencez');
+      _pinFirst='';
+      setTimeout(()=>pinSetMode(_pinMode==='setup2'?'setup1':'change2'),800);
+    }
+  }
+  else if(_pinMode==='change1'){
+    // Vérifie l'ancien PIN
+    if(hash===storedPin||(storedMaster&&hash===storedMaster)){
+      pinSetMode('change2');
+    } else {
+      pinShakeError('Code incorrect');
+    }
+  }
+  else if(_pinMode==='master'){
+    _pinFirst=hash;
+    pinSetMode('master2');
+  }
+  else if(_pinMode==='master2'){
+    if(hash===_pinFirst){
+      localStorage.setItem('sc_master_hash',hash);
+      pinHide();
+      toast('🛡️ Code maître enregistré !');
+      pinUpdateCfgStatus();
+    } else {
+      pinShakeError('Codes différents — recommencez');
+      _pinFirst='';
+      setTimeout(()=>pinSetMode('master'),800);
+    }
+  }
+}
+
+function pinShakeError(msg){
+  document.getElementById('pin-error').textContent=msg;
+  const dots=document.getElementById('pin-dots');
+  // Erreur visuelle sur les points
+  for(let i=0;i<PIN_LEN;i++){const d=document.getElementById('pd'+i);if(d)d.classList.add('error');}
+  dots.classList.remove('shake');
+  void dots.offsetWidth; // reflow
+  dots.classList.add('shake');
+  setTimeout(()=>{
+    dots.classList.remove('shake');
+    for(let i=0;i<PIN_LEN;i++){const d=document.getElementById('pd'+i);if(d)d.className='pin-dot';}
+  },400);
+}
+
+function openPinSetup(mode){
+  closeSettings();
+  document.getElementById('pin-screen').classList.remove('hidden');
+  if(mode==='change'){
+    pinSetMode(pinIsConfigured()?'change1':'setup1');
+  } else if(mode==='master'){
+    pinSetMode('master');
+  }
+}
+
+function removePin(){
+  if(!pinIsConfigured()){toast('ℹ️ Aucun PIN configuré');return;}
+  if(!confirm('Supprimer le code PIN ? L\'application sera accessible sans code.'))return;
+  localStorage.removeItem('sc_pin_hash');
+  localStorage.removeItem('sc_master_hash');
+  localStorage.removeItem('sc_pin_att');
+  localStorage.removeItem('sc_pin_lock');
+  toast('🔓 Code PIN supprimé');
+  pinUpdateCfgStatus();
+}
+
+function pinUpdateCfgStatus(){
+  const el=document.getElementById('pin-status-cfg');
+  if(!el)return;
+  if(pinIsConfigured()){
+    const hasMaster=!!localStorage.getItem('sc_master_hash');
+    el.innerHTML='<span style="color:var(--green);">🔒 Code PIN actif</span>'+(hasMaster?' · <span style="color:var(--green);">🛡️ Code maître configuré</span>':' · <span style="color:var(--amber);">⚠️ Aucun code maître</span>');
+  } else {
+    el.innerHTML='<span style="color:var(--muted);">🔓 Aucun code PIN configuré — l\'app est ouverte à tous</span>';
+  }
+}
+
+// Clavier physique (PC)
+document.addEventListener('keydown',e=>{
+  const ps=document.getElementById('pin-screen');
+  if(ps&&!ps.classList.contains('hidden')){
+    if(e.key>='0'&&e.key<='9'){pinKey(e.key);}
+    else if(e.key==='Backspace'){pinDel();}
+    e.preventDefault();
+  }
+});
+
+// pinCheckAndShow() et pinUpdateCfgStatus() sont appelés depuis DOMContentLoaded
 
 // Détection iOS - instructions manuelles
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;

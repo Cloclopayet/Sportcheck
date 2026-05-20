@@ -1,5 +1,5 @@
-// SportCheck Service Worker v6 — sol amortissant + Google Doc Drive
-const CACHE = 'sportcheck-v6';
+// SportCheck Service Worker v7 — code PIN par appareil
+const CACHE = 'sportcheck-v7';
 const ASSETS = [
   './',
   './index.html',
